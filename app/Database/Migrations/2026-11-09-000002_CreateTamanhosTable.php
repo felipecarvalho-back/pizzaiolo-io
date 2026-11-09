@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Database\Migrations;
+
+use CodeIgniter\Database\Migration;
+
+class CreateTamanhosTable extends Migration
+{
+    public function up()
+    {
+        $this->forge->addField([
+            'id' => [
+                'type'           => 'INT',
+                'constraint'     => 11,
+                'unsigned'       => true,
+                'auto_increment' => true,
+            ],
+            'nome' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 60,
+            ],
+            'sigla' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 10,
+                'null'       => true,
+            ],
+            'fatias' => [
+                'type'       => 'INT',
+                'constraint' => 4,
+                'default'    => 8,
+            ],
+            'max_sabores' => [
+                'type'       => 'INT',
+                'constraint' => 2,
+                'default'    => 2,
+            ],
+            'ordem' => [
+                'type'       => 'INT',
+                'constraint' => 5,
+                'default'    => 0,
+            ],
+            'ativo' => [
+                'type'       => 'TINYINT',
+                'constraint' => 1,
+                'default'    => 1,
+            ],
+            'created_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+            'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+        ]);
+        $this->forge->addKey('id', true);
+        $this->forge->createTable('tamanhos');
+    }
+
+    public function down()
+    {
+        $this->forge->dropTable('tamanhos', true);
+    }
+}
