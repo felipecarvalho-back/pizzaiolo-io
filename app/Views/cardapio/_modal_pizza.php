@@ -34,10 +34,10 @@
                         <span class="font-bold text-stone-800 block text-xs">Média</span>
                         <span class="text-[10px] text-stone-500">6 fatias</span>
                     </label>
-                    <label class="cursor-pointer border border-brand-800 bg-brand-50 p-2.5 rounded-xl text-center has-[:checked]:border-brand-800 has-[:checked]:bg-brand-50 transition">
+                    <label class="cursor-pointer border border-stone-200 p-2.5 rounded-xl text-center has-[:checked]:border-brand-800 has-[:checked]:bg-brand-50 transition">
                         <input type="radio" name="tamanho" value="Grande" checked class="hidden" />
-                        <span class="font-bold text-brand-900 block text-xs">Grande</span>
-                        <span class="text-[10px] text-brand-800 font-semibold">8 fatias</span>
+                        <span class="font-bold text-stone-800 block text-xs">Grande</span>
+                        <span class="text-[10px] text-stone-500">8 fatias</span>
                     </label>
                 </div>
             </div>
