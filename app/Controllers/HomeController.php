@@ -7,7 +7,7 @@ use App\Models\CategoriaModel;
 use App\Models\ClienteModel;
 use App\Models\ProdutoModel;
 
-class Home extends BaseController
+class HomeController extends BaseController
 {
     public function index(): string
     {
