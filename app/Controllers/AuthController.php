@@ -2,50 +2,95 @@
 
 namespace App\Controllers;
 
+use App\Models\ClienteModel;
 use App\Models\UsuarioModel;
 
 class AuthController extends BaseController
 {
+    /**
+     * Tela de Login Única (para Clientes e Administradores)
+     */
     public function login()
     {
+        // Se já for admin logado, vai direto pro painel
         if (session()->get('logado')) {
             return redirect()->to('/painel');
+        }
+
+        // Se já for cliente logado, vai direto pro perfil dele
+        if (session()->get('cliente_logado')) {
+            return redirect()->to('/cliente/perfil');
         }
 
         return view('auth/login');
     }
 
+    /**
+     * Autenticação Inteligente:
+     * 1. Se for Administrador/Equipe -> Painel (/painel)
+     * 2. Se for Cliente -> Espaço do Cliente (/cliente/perfil ou cardápio)
+     */
     public function autenticar()
     {
         $email = trim((string) $this->request->getPost('email'));
         $senha = (string) $this->request->getPost('senha');
 
+        if (empty($email) || empty($senha)) {
+            return redirect()->back()->withInput()->with('erro', 'Informe seu e-mail e senha.');
+        }
+
+        // 1. Tenta como Administrador / Equipe
         $usuarioModel = new UsuarioModel();
         $usuario = $usuarioModel->buscarPorEmail($email);
 
-        if (! $usuario || ! $usuario->verificarSenha($senha)) {
-            return redirect()->back()
-                ->withInput()
-                ->with('erro', 'E-mail ou senha inválidos.');
+        if ($usuario && $usuario->verificarSenha($senha)) {
+            $usuarioModel->update($usuario->id, ['ultimo_acesso' => date('Y-m-d H:i:s')]);
+
+            session()->set([
+                'usuario_id'    => $usuario->id,
+                'usuario_nome'  => $usuario->nome,
+                'usuario_email' => $usuario->email,
+                'usuario_cargo' => $usuario->cargo,
+                'logado'        => true,
+            ]);
+
+            return redirect()->to('/painel')->with('sucesso', 'Bem-vindo ao Painel, ' . $usuario->nome . '!');
         }
 
-        // Atualiza último acesso
-        $usuarioModel->update($usuario->id, ['ultimo_acesso' => date('Y-m-d H:i:s')]);
+        // 2. Se não for admin, tenta como Cliente
+        $clienteModel = new ClienteModel();
+        $cliente = $clienteModel->buscarPorEmail($email);
 
-        session()->set([
-            'usuario_id'    => $usuario->id,
-            'usuario_nome'  => $usuario->nome,
-            'usuario_email' => $usuario->email,
-            'usuario_cargo' => $usuario->cargo,
-            'logado'        => true,
-        ]);
+        if ($cliente && $cliente->verificarSenha($senha)) {
+            session()->set([
+                'cliente_id'       => $cliente->id,
+                'cliente_nome'     => $cliente->nome,
+                'cliente_email'    => $cliente->email,
+                'cliente_telefone' => $cliente->telefone,
+                'cliente_logado'   => true,
+            ]);
 
-        return redirect()->to('/painel')->with('sucesso', 'Bem-vindo de volta, ' . $usuario->nome . '!');
+            // Se veio do cardápio tentando finalizar, volta pro cardápio; senão vai pro perfil
+            $redirectUrl = (string) $this->request->getPost('redirect');
+            if (! empty($redirectUrl)) {
+                return redirect()->to($redirectUrl)->with('sucesso', 'Olá, ' . explode(' ', $cliente->nome)[0] . '!');
+            }
+
+            return redirect()->to('/cliente/perfil')->with('sucesso', 'Bem-vindo ao seu espaço, ' . explode(' ', $cliente->nome)[0] . '!');
+        }
+
+        // 3. Credenciais inválidas em ambos
+        return redirect()->back()
+            ->withInput()
+            ->with('erro', 'E-mail ou senha incorretos.');
     }
 
+    /**
+     * Logout global
+     */
     public function logout()
     {
         session()->destroy();
-        return redirect()->to('/login')->with('sucesso', 'Sessão encerrada com segurança.');
+        return redirect()->to('/login')->with('sucesso', 'Sua sessão foi encerrada.');
     }
 }
