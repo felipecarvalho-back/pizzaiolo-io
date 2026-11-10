@@ -83,26 +83,10 @@ class CreateClientesTable extends Migration
 
         $this->forge->addKey('id', true);
         $this->forge->createTable('clientes');
-
-        // Adiciona cliente_id na tabela pedidos se ainda não existir
-        if ($this->db->tableExists('pedidos') && ! $this->db->fieldExists('cliente_id', 'pedidos')) {
-            $this->forge->addColumn('pedidos', [
-                'cliente_id' => [
-                    'type'       => 'INT',
-                    'constraint' => 11,
-                    'unsigned'   => true,
-                    'null'       => true,
-                    'after'      => 'codigo',
-                ],
-            ]);
-        }
     }
 
     public function down()
     {
-        if ($this->db->fieldExists('cliente_id', 'pedidos')) {
-            $this->forge->dropColumn('pedidos', 'cliente_id');
-        }
         $this->forge->dropTable('clientes', true);
     }
 }

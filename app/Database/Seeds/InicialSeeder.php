@@ -151,5 +151,23 @@ class InicialSeeder extends Seeder
             ];
             $this->db->table('produtos')->insertBatch($produtos);
         }
+
+        // 6. Cliente de Teste Inicial
+        if ($this->db->table('clientes')->where('email', 'cliente@fornodoro.com')->countAllResults() === 0) {
+            $this->db->table('clientes')->insert([
+                'nome'       => 'Cliente Exemplo',
+                'email'      => 'cliente@fornodoro.com',
+                'telefone'   => '(11) 98765-4321',
+                'senha'      => password_hash('123456', PASSWORD_DEFAULT),
+                'cep'        => '01310-100',
+                'endereco'   => 'Avenida Paulista',
+                'numero'     => '1000',
+                'bairro'     => 'Bela Vista',
+                'cidade'     => 'São Paulo',
+                'ativo'      => 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
     }
 }

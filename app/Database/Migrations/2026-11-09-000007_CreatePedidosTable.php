@@ -20,6 +20,12 @@ class CreatePedidosTable extends Migration
                 'constraint' => 30,
                 'unique'     => true,
             ],
+            'cliente_id' => [
+                'type'       => 'INT',
+                'constraint' => 11,
+                'unsigned'   => true,
+                'null'       => true,
+            ],
             'cliente_nome' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
