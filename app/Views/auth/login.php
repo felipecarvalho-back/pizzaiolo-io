@@ -32,23 +32,53 @@
         };
     </script>
 </head>
-<body class="bg-[#faf8f5] text-stone-900 font-sans antialiased min-h-screen flex flex-col justify-between p-4 selection:bg-brand-100 selection:text-brand-900">
+<body class="bg-[#faf8f5] text-stone-900 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-brand-100 selection:text-brand-900">
 
-    <!-- Topbar simples -->
-    <header class="max-w-md mx-auto w-full pt-2 flex justify-between items-center">
-        <a href="<?= base_url('/') ?>" class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-brand-800 text-white flex items-center justify-center font-serif font-bold text-sm shadow-xs">
-                F
+    <!-- HEADER: Mesmo navbar editorial do Home -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+            
+            <!-- Marca -->
+            <a href="<?= base_url('/') ?>" class="flex items-center gap-3 group shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-brand-800 text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm group-hover:bg-brand-900 transition">
+                    F
+                </div>
+                <div>
+                    <span class="font-serif font-bold text-lg text-stone-900 tracking-tight block leading-none">Forno d'Oro</span>
+                    <span class="text-[11px] text-stone-500 font-medium block mt-0.5">Pizzaria Napolitana</span>
+                </div>
+            </a>
+
+            <!-- Status do Restaurante -->
+            <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 text-xs text-stone-600 border border-stone-200/60">
+                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <span class="font-medium text-stone-800">Aberto agora</span>
+                <span class="text-stone-300">•</span>
+                <span>Entrega em 35–45 min</span>
             </div>
-            <span class="font-serif font-bold text-lg text-stone-900">Forno d'Oro</span>
-        </a>
-        <a href="<?= base_url('/') ?>" class="text-xs font-medium text-stone-500 hover:text-stone-900 transition flex items-center gap-1">
-            <span class="material-symbols-outlined text-[16px]">arrow_back</span> Cardápio
-        </a>
+
+            <!-- Ações Direita: Admin / Cliente / Sacola / Voltar -->
+            <div class="flex items-center gap-2.5 shrink-0">
+                <a href="<?= base_url('/') ?>" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[18px]">restaurant_menu</span>
+                    <span class="hidden sm:inline">Cardápio</span>
+                </a>
+
+                <!-- Botão da Sacola que leva de volta ao Home com itens -->
+                <a href="<?= base_url('/') ?>" class="relative flex items-center gap-2 bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">
+                    <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
+                    <span class="hidden sm:inline">Sacola</span>
+                    <span id="badge-sacola" class="px-2 py-0.2 rounded-full bg-black/25 text-xs font-bold">
+                        <?= count(session()->get('carrinho') ?? []) ?>
+                    </span>
+                </a>
+            </div>
+
+        </div>
     </header>
 
-    <main class="w-full max-w-md mx-auto my-auto">
-        <div class="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 flex-1 flex items-center justify-center py-10">
+        <div class="w-full max-w-md bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
             
             <div class="text-center mb-6">
                 <h1 class="font-serif font-bold text-2xl text-stone-900">Acesse sua conta</h1>
