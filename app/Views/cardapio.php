@@ -247,12 +247,12 @@
     </div>
 
     <!-- MODAL CONTAINER: Preenchido dinamicamente pelo HTMX -->
-    <div id="modal-wrapper" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="modal-wrapper" onclick="if(event.target === this) fecharModal()" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div id="modal-container" class="w-full sm:max-w-lg"></div>
     </div>
 
     <!-- DRAWER LATERAL DA SACOLA: Carregado e atualizado via HTMX -->
-    <div id="drawer-sacola" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex justify-end">
+    <div id="drawer-sacola" onclick="if(event.target === this) toggleSacola()" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex justify-end">
         <div class="bg-white border-l border-stone-200 w-full max-w-md h-full flex flex-col justify-between shadow-2xl">
             
             <div class="p-4 border-b border-stone-200 flex items-center justify-between">
@@ -273,24 +273,51 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT ULTRA-ENXUTO (Apenas 15 linhas para controle visual de UI) -->
+    <!-- JAVASCRIPT ULTRA-ENXUTO (Apenas controle de modais, scroll lock e filtros locais) -->
     <script>
+        function atualizarScrollBody() {
+            const modalAberto = !document.getElementById('modal-wrapper')?.classList.contains('hidden');
+            const drawerAberto = !document.getElementById('drawer-sacola')?.classList.contains('hidden');
+            if (modalAberto || drawerAberto) {
+                document.body.classList.add('overflow-hidden');
+            } else {
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
         function toggleSacola() {
             document.getElementById('drawer-sacola').classList.toggle('hidden');
+            atualizarScrollBody();
         }
 
         function toggleSacolaSeFechada() {
             const drawer = document.getElementById('drawer-sacola');
-            if (drawer.classList.contains('hidden')) drawer.classList.remove('hidden');
+            if (drawer && drawer.classList.contains('hidden')) {
+                drawer.classList.remove('hidden');
+                atualizarScrollBody();
+            }
         }
 
         function abrirModal() {
             document.getElementById('modal-wrapper').classList.remove('hidden');
+            atualizarScrollBody();
         }
 
         function fecharModal() {
             document.getElementById('modal-wrapper').classList.add('hidden');
+            atualizarScrollBody();
         }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                fecharModal();
+                const drawer = document.getElementById('drawer-sacola');
+                if (drawer && !drawer.classList.contains('hidden')) {
+                    drawer.classList.add('hidden');
+                }
+                atualizarScrollBody();
+            }
+        });
 
         function filtrarCategoria(cat, btn) {
             document.querySelectorAll('.btn-cat').forEach(b => {
