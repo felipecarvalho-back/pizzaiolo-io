@@ -430,6 +430,14 @@
                 bordaId: Number(config.bordaId) || 0,
                 obs: '',
 
+                init() {
+                    this.$watch('tamanho', (val) => {
+                        if (val === 'Broto') {
+                            this.sabor2Id = '';
+                        }
+                    });
+                },
+
                 get fatorTamanho() {
                     if (this.tamanho === 'Broto') return 0.75;
                     if (this.tamanho === 'Média') return 0.90;

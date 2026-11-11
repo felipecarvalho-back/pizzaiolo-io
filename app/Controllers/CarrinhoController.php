@@ -110,7 +110,7 @@ class CarrinhoController extends BaseController
             $titulo = "Pizza {$tamanhoNome} — {$produto->nome}";
             $sabor2Id = (int) $this->request->getPost('sabor_2_id');
 
-            if ($sabor2Id > 0 && $sabor2Id !== $produtoId) {
+            if ($tamanhoNome !== 'Broto' && $sabor2Id > 0 && $sabor2Id !== $produtoId) {
                 $p2 = $produtoModel->find($sabor2Id);
                 if ($p2) {
                     $precoBase = max($precoBase, (float) $p2->preco_base);
@@ -195,13 +195,22 @@ class CarrinhoController extends BaseController
         $pagamento = (string) $this->request->getPost('forma_pagamento');
         $entrega   = (string) $this->request->getPost('tipo_entrega');
 
+        $mesa = trim((string) $this->request->getPost('mesa'));
+        if ($entrega === 'mesa' && !empty($mesa)) {
+            $endereco = 'Mesa ' . $mesa . (!empty($endereco) ? ' — ' . $endereco : '');
+        }
+
         $trocoParaRaw = $this->request->getPost('troco_para');
         $trocoPara    = null;
-        if (!empty($trocoParaRaw)) {
-            $trocoLimpo = str_replace(['R$', ' ', '.'], '', (string) $trocoParaRaw);
-            $trocoLimpo = str_replace(',', '.', $trocoLimpo);
-            if (is_numeric($trocoLimpo)) {
-                $trocoPara = (float) $trocoLimpo;
+        if ($pagamento === 'dinheiro' && !empty($trocoParaRaw)) {
+            $raw = trim((string) $trocoParaRaw);
+            $raw = preg_replace('/[^\d.,]/', '', $raw);
+            if (str_contains($raw, ',')) {
+                $raw = str_replace('.', '', $raw);
+                $raw = str_replace(',', '.', $raw);
+            }
+            if (is_numeric($raw)) {
+                $trocoPara = round((float) $raw, 2);
             }
         }
 

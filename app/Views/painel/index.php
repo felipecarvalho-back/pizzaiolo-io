@@ -191,6 +191,12 @@
                         Pendentes
                     </button>
                     <button type="button" 
+                            @click="filtroStatusPedido = 'confirmado'"
+                            :class="filtroStatusPedido === 'confirmado' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition shrink-0">
+                        Confirmados
+                    </button>
+                    <button type="button" 
                             @click="filtroStatusPedido = 'em_preparo'"
                             :class="filtroStatusPedido === 'em_preparo' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-800 hover:bg-purple-100'"
                             class="px-3 py-1.5 rounded-lg text-xs font-semibold transition shrink-0">
@@ -487,7 +493,7 @@
 
                 <div class="space-y-3 max-h-[560px] overflow-y-auto pr-1">
                     <?php foreach ($produtos as $p): ?>
-                        <div x-show="produtoVisivel('<?= esc(addslashes(strtolower($p->nome))) ?>', '<?= esc(addslashes(strtolower((string)$p->descricao))) ?>', '<?= (int)$p->categoria_id ?>', '<?= esc($p->tipo) ?>')"
+                        <div x-show="produtoVisivel('<?= esc(addslashes(strtolower($p->nome))) ?>', '<?= esc(addslashes(preg_replace('/\r?\n/', ' ', strtolower((string)$p->descricao)))) ?>', '<?= (int)$p->categoria_id ?>', '<?= esc($p->tipo) ?>')"
                              x-transition
                              class="bg-stone-50 border border-stone-200/70 p-3 rounded-xl flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0">
@@ -503,11 +509,12 @@
                                     <span class="text-xs font-bold text-stone-900">R$ <?= number_format((float) $p->preco_base, 2, ',', '.') ?></span>
                                 </div>
                             </div>
-                            <a href="<?= base_url('painel/produto/excluir/' . $p->id) ?>"
-                               onclick="return confirm('Deseja remover este item do cardápio?')"
-                               class="w-8 h-8 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-700 flex items-center justify-center shrink-0 transition">
+                            <button type="button"
+                                    @click="abrirModalConfirmacao('Remover Produto', 'Deseja remover este item do cardápio? Esta ação não pode ser desfeita.', 'Sim, Remover', 'red', () => { window.location.href = '<?= base_url('painel/produto/excluir/' . $p->id) ?>'; })"
+                                    class="w-8 h-8 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-700 flex items-center justify-center shrink-0 transition"
+                                    title="Remover produto">
                                 <span class="material-symbols-outlined text-[18px]">delete</span>
-                            </a>
+                            </button>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -638,11 +645,12 @@
                                 </div>
                             </div>
                             <?php if ($u->id !== (int) session()->get('usuario_id')): ?>
-                                <a href="<?= base_url('painel/usuario/excluir/' . $u->id) ?>"
-                                   onclick="return confirm('Excluir este usuário?')"
-                                   class="w-8 h-8 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-700 flex items-center justify-center transition">
+                                <button type="button"
+                                        @click="abrirModalConfirmacao('Excluir Usuário', 'Deseja realmente excluir este usuário do sistema?', 'Sim, Excluir', 'red', () => { window.location.href = '<?= base_url('painel/usuario/excluir/' . $u->id) ?>'; })"
+                                        class="w-8 h-8 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-700 flex items-center justify-center transition"
+                                        title="Excluir usuário">
                                     <span class="material-symbols-outlined text-[18px]">delete</span>
-                                </a>
+                                </button>
                             <?php else: ?>
                                 <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-semibold">Você</span>
                             <?php endif; ?>
@@ -654,6 +662,67 @@
 
     </main>
 
+    <!-- MODAL DE CONFIRMAÇÃO E AVISO REATIVO COM ALPINE.JS -->
+    <div x-show="modalConfirmacao" 
+         x-cloak 
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         aria-labelledby="modal-title" 
+         role="dialog" 
+         aria-modal="true">
+        <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+            <!-- Backdrop -->
+            <div x-show="modalConfirmacao"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="fecharModalConfirmacao()"
+                 class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs transition-opacity" 
+                 aria-hidden="true"></div>
+
+            <!-- Card Modal -->
+            <div x-show="modalConfirmacao"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-stone-200">
+                
+                <div class="flex items-start gap-4">
+                    <div :class="modalCorBotao === 'red' ? 'bg-red-100 text-red-700' : 'bg-brand-100 text-brand-800'"
+                         class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:mx-0">
+                        <span class="material-symbols-outlined text-[24px]" x-text="modalCorBotao === 'red' ? 'warning' : 'help'"></span>
+                    </div>
+                    <div class="mt-0.5 text-left flex-1">
+                        <h3 class="text-base font-bold text-stone-900 font-serif" id="modal-title" x-text="modalTitulo"></h3>
+                        <div class="mt-2">
+                            <p class="text-xs text-stone-600 leading-relaxed" x-text="modalMsg"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
+                    <button type="button" 
+                            x-show="!modalApenasAviso"
+                            @click="fecharModalConfirmacao()"
+                            class="inline-flex w-full sm:w-auto justify-center rounded-xl bg-stone-100 px-4 py-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-200 transition focus:outline-none">
+                        Cancelar
+                    </button>
+                    <button type="button"
+                            @click="executarAcaoConfirmacao()"
+                            :class="modalCorBotao === 'red' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-brand-800 hover:bg-brand-900 text-white'"
+                            class="inline-flex w-full sm:w-auto justify-center rounded-xl px-4 py-2.5 text-xs font-semibold shadow-xs transition focus:outline-none">
+                        <span x-text="modalBotaoTexto"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS ALPINE.JS DO PAINEL -->
     <script>
         function painelApp() {
@@ -662,6 +731,38 @@
 
             return {
                 abaAtiva: initialTab,
+
+                // Modal de Confirmação & Alertas
+                modalConfirmacao: false,
+                modalTitulo: '',
+                modalMsg: '',
+                modalBotaoTexto: 'Confirmar',
+                modalCorBotao: 'brand',
+                modalApenasAviso: false,
+                acaoConfirmar: null,
+
+                abrirModalConfirmacao(titulo, msg, btnTexto = 'Confirmar', cor = 'brand', acao = null, apenasAviso = false) {
+                    this.modalTitulo = titulo;
+                    this.modalMsg = msg;
+                    this.modalBotaoTexto = btnTexto;
+                    this.modalCorBotao = cor;
+                    this.acaoConfirmar = acao;
+                    this.modalApenasAviso = Boolean(apenasAviso);
+                    this.modalConfirmacao = true;
+                },
+
+                fecharModalConfirmacao() {
+                    this.modalConfirmacao = false;
+                    this.acaoConfirmar = null;
+                },
+
+                executarAcaoConfirmacao() {
+                    const acao = this.acaoConfirmar;
+                    this.fecharModalConfirmacao();
+                    if (typeof acao === 'function') {
+                        acao();
+                    }
+                },
 
                 // Filtros de Ordens
                 buscaPedido: '',
@@ -682,10 +783,14 @@
                 pedidoVisivel(codigo, clienteNome, clienteTelefone, status) {
                     const termo = this.buscaPedido.trim().toLowerCase();
                     const statusOk = (this.filtroStatusPedido === 'todos' || status === this.filtroStatusPedido);
+                    const telLimpo = clienteTelefone.replace(/\D/g, '');
+                    const termoDigitos = termo.replace(/\D/g, '');
+                    const telOk = termoDigitos.length > 0 && telLimpo.includes(termoDigitos);
                     const buscaOk = !termo || 
                         codigo.includes(termo) || 
                         clienteNome.includes(termo) || 
-                        clienteTelefone.includes(termo);
+                        clienteTelefone.includes(termo) ||
+                        telOk;
                     return statusOk && buscaOk;
                 },
 
@@ -697,36 +802,40 @@
                     return buscaOk && catOk && tipoOk;
                 },
 
-                async atualizarStatus(pedidoId, novoStatus) {
+                atualizarStatus(pedidoId, novoStatus) {
                     const statusLegivel = novoStatus.replace('_', ' ');
-                    if (!confirm(`Deseja alterar o status do pedido para "${statusLegivel}"?`)) {
-                        return;
-                    }
+                    this.abrirModalConfirmacao(
+                        'Alterar Status',
+                        `Deseja alterar o status do pedido para "${statusLegivel}"?`,
+                        'Confirmar',
+                        'brand',
+                        async () => {
+                            try {
+                                const formData = new FormData();
+                                formData.append('pedido_id', pedidoId);
+                                formData.append('status', novoStatus);
+                                formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
 
-                    try {
-                        const formData = new FormData();
-                        formData.append('pedido_id', pedidoId);
-                        formData.append('status', novoStatus);
-                        formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+                                const resp = await fetch('<?= base_url('painel/pedido/status') ?>', {
+                                    method: 'POST',
+                                    body: formData,
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    }
+                                });
 
-                        const resp = await fetch('<?= base_url('painel/pedido/status') ?>', {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
+                                const data = await resp.json();
+                                if (data.sucesso) {
+                                    window.location.reload();
+                                } else {
+                                    this.abrirModalConfirmacao('Aviso', data.erro || 'Não foi possível alterar o status.', 'OK', 'brand', null, true);
+                                }
+                            } catch (e) {
+                                console.error('Erro ao atualizar status', e);
+                                this.abrirModalConfirmacao('Erro', 'Falha de comunicação ao atualizar o status do pedido.', 'OK', 'brand', null, true);
                             }
-                        });
-
-                        const data = await resp.json();
-                        if (data.sucesso) {
-                            window.location.reload();
-                        } else {
-                            alert(data.erro || 'Não foi possível alterar o status.');
                         }
-                    } catch (e) {
-                        console.error('Erro ao atualizar status', e);
-                        alert('Falha de comunicação ao atualizar o status do pedido.');
-                    }
+                    );
                 }
             };
         }

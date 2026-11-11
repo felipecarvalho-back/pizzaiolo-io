@@ -46,19 +46,19 @@ foreach ($bordas as $b) {
                 <div class="grid grid-cols-3 gap-2">
                     <label :class="tamanho === 'Broto' ? 'border-brand-800 bg-brand-50 shadow-xs' : 'border-stone-200 hover:border-stone-300'"
                            class="cursor-pointer border p-2.5 rounded-xl text-center transition block">
-                        <input type="radio" name="tamanho" value="Broto" x-model="tamanho" class="hidden" />
+                        <input type="radio" name="tamanho" value="Broto" x-model="tamanho" @change="if (tamanho === 'Broto') sabor2Id = ''" class="hidden" />
                         <span class="font-bold text-stone-800 block text-xs">Broto</span>
                         <span class="text-[10px] text-stone-500">4 fatias (0.75x)</span>
                     </label>
                     <label :class="tamanho === 'Média' ? 'border-brand-800 bg-brand-50 shadow-xs' : 'border-stone-200 hover:border-stone-300'"
                            class="cursor-pointer border p-2.5 rounded-xl text-center transition block">
-                        <input type="radio" name="tamanho" value="Média" x-model="tamanho" class="hidden" />
+                        <input type="radio" name="tamanho" value="Média" x-model="tamanho" @change="if (tamanho === 'Broto') sabor2Id = ''" class="hidden" />
                         <span class="font-bold text-stone-800 block text-xs">Média</span>
                         <span class="text-[10px] text-stone-500">6 fatias (0.90x)</span>
                     </label>
                     <label :class="tamanho === 'Grande' ? 'border-brand-800 bg-brand-50 shadow-xs' : 'border-stone-200 hover:border-stone-300'"
                            class="cursor-pointer border p-2.5 rounded-xl text-center transition block">
-                        <input type="radio" name="tamanho" value="Grande" x-model="tamanho" class="hidden" />
+                        <input type="radio" name="tamanho" value="Grande" x-model="tamanho" @change="if (tamanho === 'Broto') sabor2Id = ''" class="hidden" />
                         <span class="font-bold text-stone-800 block text-xs">Grande</span>
                         <span class="text-[10px] text-stone-500">8 fatias (1.0x)</span>
                     </label>
@@ -81,6 +81,7 @@ foreach ($bordas as $b) {
                         <span class="text-[10px] font-semibold text-stone-500 uppercase block mb-1">2º Sabor Opcional (50% / 50%)</span>
                         <select name="sabor_2_id" 
                                 x-model="sabor2Id"
+                                :disabled="tamanho === 'Broto'"
                                 class="w-full bg-white border border-stone-200 rounded-xl p-2.5 text-xs text-stone-900 focus:outline-none focus:border-brand-800">
                             <option value="">Sem segundo sabor (100% <?= esc($produto->nome) ?>)</option>
                             <?php foreach ($todasPizzas as $p): ?>
