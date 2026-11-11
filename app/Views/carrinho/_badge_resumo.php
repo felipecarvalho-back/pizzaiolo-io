@@ -1,5 +1,5 @@
 <!-- Atualiza o Badge do Topo -->
-<span id="badge-sacola" hx-swap-oob="true" class="px-2 py-0.2 rounded-full bg-black/25 text-xs font-bold">
+<span id="badge-sacola" hx-swap-oob="true" class="px-2 py-0.5 rounded-full bg-black/25 text-xs font-bold">
     <?= $qtd ?>
 </span>
 

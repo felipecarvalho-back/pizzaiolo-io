@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -33,15 +34,23 @@
             }
         };
     </script>
-    <!-- HTMX CDN: Reduz o JavaScript a praticamente zero -->
+
+    <!-- Alpine.js Core (defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+    <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
     <style>
+        [x-cloak] { display: none !important; }
         body { font-family: 'Inter', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-[#faf8f5] text-stone-900 antialiased min-h-screen flex flex-col pb-24 selection:bg-brand-100 selection:text-brand-900">
+<body x-data="cardapioApp()" 
+      @keydown.escape.window="fecharTodosModais()"
+      class="bg-[#faf8f5] text-stone-900 antialiased min-h-screen flex flex-col pb-24 selection:bg-brand-100 selection:text-brand-900">
 
     <!-- HEADER: Editorial, limpo e em linha única -->
     <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
@@ -90,11 +99,13 @@
                     </a>
                 <?php endif; ?>
 
-                <!-- Botão da Sacola com HTMX OOB Updates -->
-                <button onclick="toggleSacola()" class="relative flex items-center gap-2 bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">
+                <!-- Botão da Sacola Reativo -->
+                <button @click="toggleSacola()" 
+                        type="button"
+                        class="relative flex items-center gap-2 bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">
                     <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
                     <span class="hidden sm:inline">Sacola</span>
-                    <span id="badge-sacola" class="px-2 py-0.2 rounded-full bg-black/25 text-xs font-bold">
+                    <span id="badge-sacola" class="px-2 py-0.5 rounded-full bg-black/25 text-xs font-bold">
                         <?= count(session()->get('carrinho') ?? []) ?>
                     </span>
                 </button>
@@ -133,47 +144,73 @@
             </div>
         </section>
 
-        <!-- BARRA DE CONTROLE: MODO DE PEDIDO + BUSCA -->
+        <!-- BARRA DE CONTROLE REATIVA: MODO DE PEDIDO + BUSCA DECLARATIVA -->
         <section class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
             <div class="inline-flex p-1 bg-white border border-stone-200/80 rounded-xl shadow-xs text-xs font-semibold">
-                <button onclick="selecionarModo('delivery', this)" class="btn-modo active px-3.5 py-1.5 rounded-lg bg-stone-900 text-white transition flex items-center gap-1.5">
+                <button type="button" 
+                        @click="selecionarModo('delivery')" 
+                        :class="modoEntrega === 'delivery' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+                        class="btn-modo px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">moped</span>
                     <span>Entrega</span>
                 </button>
-                <button onclick="selecionarModo('retirada', this)" class="btn-modo px-3.5 py-1.5 rounded-lg text-stone-600 hover:text-stone-900 transition flex items-center gap-1.5">
+                <button type="button" 
+                        @click="selecionarModo('retirada')" 
+                        :class="modoEntrega === 'retirada' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+                        class="btn-modo px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">storefront</span>
                     <span>Retirada</span>
                 </button>
-                <button onclick="selecionarModo('mesa', this)" class="btn-modo px-3.5 py-1.5 rounded-lg text-stone-600 hover:text-stone-900 transition flex items-center gap-1.5">
+                <button type="button" 
+                        @click="selecionarModo('mesa')" 
+                        :class="modoEntrega === 'mesa' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+                        class="btn-modo px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">table_restaurant</span>
                     <span>Na Mesa</span>
                 </button>
             </div>
 
-            <!-- Busca Rápida -->
+            <!-- Busca Rápida Declarativa via x-model -->
             <div class="relative flex-1 max-w-xs">
                 <span class="material-symbols-outlined text-stone-400 text-[18px] absolute left-3 top-1/2 -translate-y-1/2">search</span>
-                <input type="text" id="campo-busca" oninput="filtrarCards()" placeholder="Buscar sabor ou ingrediente..." 
-                       class="w-full bg-white border border-stone-200/90 rounded-xl py-2 pl-9 pr-3 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-800 shadow-xs transition" />
+                <input type="text" 
+                       x-model="busca" 
+                       placeholder="Buscar sabor ou ingrediente..." 
+                       class="w-full bg-white border border-stone-200/90 rounded-xl py-2 pl-9 pr-8 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-800 shadow-xs transition" />
+                <button x-show="busca.length > 0" 
+                        x-cloak
+                        @click="busca = ''" 
+                        type="button" 
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs">✕</button>
             </div>
         </section>
 
-        <!-- FILTROS DE CATEGORIA (SERVER-SIDE RENDERED) -->
+        <!-- FILTROS DE CATEGORIA REATIVOS -->
         <section class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
-            <button onclick="filtrarCategoria('todas', this)" class="btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-stone-900 text-white transition">
+            <button type="button"
+                    @click="categoriaAtiva = 'todas'" 
+                    :class="categoriaAtiva === 'todas' ? 'bg-stone-900 text-white font-semibold shadow-xs' : 'bg-white border border-stone-200/90 text-stone-700 font-medium hover:border-stone-400'"
+                    class="btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs transition">
                 Todas as Opções
             </button>
             <?php foreach ($categorias as $cat): ?>
-                <button onclick="filtrarCategoria('<?= esc($cat->slug) ?>', this)" class="btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 transition">
+                <button type="button"
+                        @click="categoriaAtiva = '<?= esc($cat->slug) ?>'" 
+                        :class="categoriaAtiva === '<?= esc($cat->slug) ?>' ? 'bg-stone-900 text-white font-semibold shadow-xs' : 'bg-white border border-stone-200/90 text-stone-700 font-medium hover:border-stone-400'"
+                        class="btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs transition">
                     <?= esc($cat->nome) ?>
                 </button>
             <?php endforeach; ?>
         </section>
 
-        <!-- GRID DE PRODUTOS: RENDERIZADO NO SERVIDOR COM HTMX TRIGGERS -->
+        <!-- GRID DE PRODUTOS: FILTRAGEM DECLARATIVA COM ALPINE.JS -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="catalogo-produtos">
             <?php foreach ($produtos as $p): ?>
-                <article class="card-produto group bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-stone-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition duration-200"
+                <article x-show="cardVisivel('<?= esc($p->categoria_slug ?? 'tradicionais') ?>', '<?= esc(addslashes(strtolower($p->nome))) ?>', '<?= esc(addslashes(strtolower((string)$p->descricao))) ?>')"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="card-produto group bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-stone-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition duration-200"
                          data-cat="<?= esc($p->categoria_slug ?? 'tradicionais') ?>"
                          data-nome="<?= esc(strtolower($p->nome)) ?>"
                          data-desc="<?= esc(strtolower((string)$p->descricao)) ?>">
@@ -198,22 +235,22 @@
                         </div>
                         
                         <?php if ($p->tipo === 'pizza'): ?>
-                            <!-- Abre o modal via HTMX sem nenhum JS procedural -->
+                            <!-- Abre o modal via HTMX com reatividade Alpine -->
                             <button hx-get="<?= base_url('carrinho/modal-pizza/' . $p->id) ?>"
                                     hx-target="#modal-container"
                                     hx-swap="innerHTML"
-                                    onclick="abrirModal()"
+                                    @click="abrirModal()"
                                     class="px-3.5 py-1.5 rounded-xl bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white font-semibold text-xs transition shadow-xs flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[16px]">tune</span>
                                 <span>Montar</span>
                             </button>
                         <?php else: ?>
-                            <!-- Adiciona direto via HTMX com zero JS -->
+                            <!-- Adiciona direto via HTMX -->
                             <button hx-post="<?= base_url('carrinho/adicionar') ?>"
                                     hx-vals='{"produto_id": <?= $p->id ?>, "tipo": "simples"}'
                                     hx-target="#drawer-conteudo"
                                     hx-swap="innerHTML"
-                                    onclick="toggleSacolaSeFechada()"
+                                    @click="abrirSacola()"
                                     class="px-3.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 active:scale-[0.98] text-stone-800 font-semibold text-xs transition flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[16px]">add</span>
                                 <span>Adicionar</span>
@@ -233,7 +270,7 @@
     $totalSessao = array_sum(array_column($carrinhoSessao, 'preco'));
     ?>
     <div id="barra-flutuante" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-11/12 max-w-lg <?= $qtdSessao === 0 ? 'hidden' : '' ?>">
-        <button onclick="toggleSacola()" class="w-full bg-stone-900 hover:bg-black active:scale-[0.99] text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between transition">
+        <button @click="toggleSacola()" type="button" class="w-full bg-stone-900 hover:bg-black active:scale-[0.99] text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between transition">
             <div class="flex items-center gap-2.5">
                 <span class="px-2 py-0.5 rounded-lg bg-brand-800 text-white text-xs font-bold">
                     <?= $qtdSessao ?> <?= $qtdSessao === 1 ? 'item' : 'itens' ?>
@@ -246,21 +283,59 @@
         </button>
     </div>
 
-    <!-- MODAL CONTAINER: Preenchido dinamicamente pelo HTMX -->
-    <div id="modal-wrapper" onclick="if(event.target === this) fecharModal()" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div id="modal-container" class="w-full sm:max-w-lg"></div>
+    <!-- MODAL CONTAINER: Controlado por Alpine.js e preenchido dinamicamente pelo HTMX -->
+    <div id="modal-wrapper" 
+         x-cloak
+         x-show="isModalOpen" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click.self="fecharModal()" 
+         class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        
+        <div x-show="isModalOpen"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95 translate-y-4 sm:translate-y-0"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+             x-transition:leave-end="opacity-0 scale-95 translate-y-4 sm:translate-y-0"
+             id="modal-container" 
+             class="w-full sm:max-w-lg">
+        </div>
     </div>
 
-    <!-- DRAWER LATERAL DA SACOLA: Carregado e atualizado via HTMX -->
-    <div id="drawer-sacola" onclick="if(event.target === this) toggleSacola()" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex justify-end">
-        <div class="bg-white border-l border-stone-200 w-full max-w-md h-full flex flex-col justify-between shadow-2xl">
+    <!-- DRAWER LATERAL DA SACOLA: Animação slide-over declarativa com Alpine.js -->
+    <div id="drawer-sacola" 
+         x-cloak
+         x-show="isDrawerOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click.self="fecharSacola()" 
+         class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex justify-end">
+        
+        <div x-show="isDrawerOpen"
+             x-transition:enter="transform transition ease-out duration-300"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transform transition ease-in duration-200"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full"
+             class="bg-white border-l border-stone-200 w-full max-w-md h-full flex flex-col justify-between shadow-2xl">
             
             <div class="p-4 border-b border-stone-200 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-brand-800">shopping_bag</span>
                     <h3 class="font-serif font-bold text-lg text-stone-900">Sua Sacola</h3>
                 </div>
-                <button onclick="toggleSacola()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center">✕</button>
+                <button @click="fecharSacola()" type="button" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center transition">✕</button>
             </div>
 
             <!-- Conteúdo dinâmico atualizado pelo HTMX -->
@@ -273,80 +348,167 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT ULTRA-ENXUTO (Apenas controle de modais, scroll lock e filtros locais) -->
+    <!-- SCRIPTS ALPINE.JS & HTMX INTEGRATION -->
     <script>
-        function atualizarScrollBody() {
-            const modalAberto = !document.getElementById('modal-wrapper')?.classList.contains('hidden');
-            const drawerAberto = !document.getElementById('drawer-sacola')?.classList.contains('hidden');
-            if (modalAberto || drawerAberto) {
-                document.body.classList.add('overflow-hidden');
-            } else {
-                document.body.classList.remove('overflow-hidden');
-            }
-        }
-
-        function toggleSacola() {
-            document.getElementById('drawer-sacola').classList.toggle('hidden');
-            atualizarScrollBody();
-        }
-
-        function toggleSacolaSeFechada() {
-            const drawer = document.getElementById('drawer-sacola');
-            if (drawer && drawer.classList.contains('hidden')) {
-                drawer.classList.remove('hidden');
-                atualizarScrollBody();
-            }
-        }
-
-        function abrirModal() {
-            document.getElementById('modal-wrapper').classList.remove('hidden');
-            atualizarScrollBody();
-        }
-
-        function fecharModal() {
-            document.getElementById('modal-wrapper').classList.add('hidden');
-            atualizarScrollBody();
-        }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                fecharModal();
-                const drawer = document.getElementById('drawer-sacola');
-                if (drawer && !drawer.classList.contains('hidden')) {
-                    drawer.classList.add('hidden');
-                }
-                atualizarScrollBody();
+        // Sincronização HTMX + Alpine.js: Re-inicializa a árvore Alpine após swaps do HTMX
+        document.addEventListener('htmx:afterSwap', function(e) {
+            if (window.Alpine && e.detail && e.detail.target) {
+                window.Alpine.initTree(e.detail.target);
             }
         });
 
-        function filtrarCategoria(cat, btn) {
-            document.querySelectorAll('.btn-cat').forEach(b => {
-                b.className = "btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 transition";
-            });
-            btn.className = "btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-stone-900 text-white transition";
+        // Componente Principal do Cardápio
+        function cardapioApp() {
+            return {
+                isDrawerOpen: false,
+                isModalOpen: false,
+                busca: '',
+                categoriaAtiva: 'todas',
+                modoEntrega: 'delivery',
+                
+                init() {
+                    window.cardapioState = this;
+                    this.$watch('isDrawerOpen', (val) => this.atualizarScroll(val || this.isModalOpen));
+                    this.$watch('isModalOpen', (val) => this.atualizarScroll(val || this.isDrawerOpen));
+                },
 
-            document.querySelectorAll('.card-produto').forEach(card => {
-                card.style.display = (cat === 'todas' || card.dataset.cat === cat) ? 'flex' : 'none';
-            });
+                abrirSacola() {
+                    this.isDrawerOpen = true;
+                },
+                fecharSacola() {
+                    this.isDrawerOpen = false;
+                },
+                toggleSacola() {
+                    this.isDrawerOpen = !this.isDrawerOpen;
+                },
+                abrirModal() {
+                    this.isModalOpen = true;
+                },
+                fecharModal() {
+                    this.isModalOpen = false;
+                },
+                fecharTodosModais() {
+                    this.isModalOpen = false;
+                    this.isDrawerOpen = false;
+                },
+
+                selecionarModo(modo) {
+                    this.modoEntrega = modo;
+                    const inputEntrega = document.getElementById('input-tipo-entrega');
+                    if (inputEntrega) {
+                        inputEntrega.value = modo;
+                        inputEntrega.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputEntrega.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                },
+
+                cardVisivel(cat, nome, desc) {
+                    const termo = this.busca.trim().toLowerCase();
+                    const categoriaOk = (this.categoriaAtiva === 'todas' || cat === this.categoriaAtiva);
+                    const buscaOk = !termo || nome.includes(termo) || (desc && desc.includes(termo));
+                    return categoriaOk && buscaOk;
+                },
+
+                atualizarScroll(bloquear) {
+                    if (bloquear) {
+                        document.body.classList.add('overflow-hidden');
+                    } else {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                }
+            };
         }
 
-        function filtrarCards() {
-            const termo = document.getElementById('campo-busca').value.toLowerCase();
-            document.querySelectorAll('.card-produto').forEach(card => {
-                const bate = card.dataset.nome.includes(termo) || card.dataset.desc.includes(termo);
-                card.style.display = bate ? 'flex' : 'none';
-            });
+        // Componente Reativo do Modal de Pizza
+        function pizzaModal(config) {
+            return {
+                preco1: Number(config.preco1) || 0,
+                precosPizzas: config.precosPizzas || {},
+                precosBordas: config.precosBordas || {},
+                tamanho: config.tamanho || 'Grande',
+                sabor2Id: config.sabor2Id || '',
+                bordaId: Number(config.bordaId) || 0,
+                obs: '',
+
+                get fatorTamanho() {
+                    if (this.tamanho === 'Broto') return 0.75;
+                    if (this.tamanho === 'Média') return 0.90;
+                    return 1.0;
+                },
+                get preco2() {
+                    if (!this.sabor2Id || this.tamanho === 'Broto') return 0;
+                    return Number(this.precosPizzas[this.sabor2Id]) || 0;
+                },
+                get precoBaseFinal() {
+                    if (this.sabor2Id && this.preco2 > 0 && this.tamanho !== 'Broto') {
+                        return Math.max(this.preco1, this.preco2);
+                    }
+                    return this.preco1;
+                },
+                get precoBorda() {
+                    return Number(this.precosBordas[this.bordaId]) || 0;
+                },
+                get precoTotal() {
+                    return (this.precoBaseFinal * this.fatorTamanho) + this.precoBorda;
+                },
+                get precoTotalFormatado() {
+                    return this.precoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                },
+
+                fecharModal() {
+                    if (window.cardapioState) {
+                        window.cardapioState.fecharModal();
+                    }
+                }
+            };
         }
 
-        function selecionarModo(modo, btn) {
-            document.querySelectorAll('.btn-modo').forEach(b => {
-                b.className = "btn-modo px-3.5 py-1.5 rounded-lg text-stone-600 hover:text-stone-900 transition flex items-center gap-1.5";
-            });
-            btn.className = "btn-modo active px-3.5 py-1.5 rounded-lg bg-stone-900 text-white transition flex items-center gap-1.5";
+        // Componente Reativo do Drawer do Carrinho
+        function drawerCheckout(config) {
+            return {
+                subtotal: Number(config.subtotal) || 0,
+                tipoEntrega: (window.cardapioState && window.cardapioState.modoEntrega) || document.getElementById('input-tipo-entrega')?.value || 'delivery',
+                formaPagamento: 'pix',
+                trocoPara: '',
 
-            const inputEntrega = document.getElementById('input-tipo-entrega');
-            if (inputEntrega) inputEntrega.value = modo;
+                mudarModo(modo) {
+                    this.tipoEntrega = modo;
+                    if (window.cardapioState) {
+                        window.cardapioState.modoEntrega = modo;
+                    }
+                },
+
+                get taxaEntrega() {
+                    return this.tipoEntrega === 'delivery' ? 5.00 : 0.00;
+                },
+                get totalFinal() {
+                    return this.subtotal + this.taxaEntrega;
+                },
+                get totalFinalFormatado() {
+                    return this.totalFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                },
+                get taxaEntregaFormatada() {
+                    return this.taxaEntrega === 0 ? 'Grátis' : 'R$ ' + this.taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            };
         }
+
+        // Funções globais de retrocompatibilidade para listeners do HTMX
+        window.toggleSacola = function() {
+            if (window.cardapioState) window.cardapioState.toggleSacola();
+        };
+        window.toggleSacolaSeFechada = function() {
+            if (window.cardapioState) window.cardapioState.abrirSacola();
+        };
+        window.abrirModal = function() {
+            if (window.cardapioState) window.cardapioState.abrirModal();
+        };
+        window.fecharModal = function() {
+            if (window.cardapioState) window.cardapioState.fecharModal();
+        };
+        window.selecionarModo = function(modo) {
+            if (window.cardapioState) window.cardapioState.selecionarModo(modo);
+        };
 
         // Listener HTMX para atualizar o badge do topo automaticamente após qualquer mutação
         document.body.addEventListener('atualizarCarrinho', function() {
