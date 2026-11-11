@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -31,6 +32,12 @@
             }
         };
     </script>
+
+    <!-- Alpine.js Core (defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 <body class="bg-[#faf8f5] text-stone-900 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-brand-100 selection:text-brand-900">
 
@@ -68,7 +75,7 @@
                 <a href="<?= base_url('/') ?>" class="relative flex items-center gap-2 bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">
                     <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
                     <span class="hidden sm:inline">Sacola</span>
-                    <span id="badge-sacola" class="px-2 py-0.2 rounded-full bg-black/25 text-xs font-bold">
+                    <span id="badge-sacola" class="px-2 py-0.5 rounded-full bg-black/25 text-xs font-bold">
                         <?= count(session()->get('carrinho') ?? []) ?>
                     </span>
                 </a>
@@ -78,7 +85,7 @@
     </header>
 
     <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 flex-1 flex items-center justify-center py-10">
-        <div class="w-full max-w-md bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div x-data="{ showSenha: false }" class="w-full max-w-md bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
             
             <div class="text-center mb-6">
                 <h1 class="font-serif font-bold text-2xl text-stone-900">Acesse sua conta</h1>
@@ -112,8 +119,15 @@
                     <div class="flex justify-between items-center mb-1">
                         <label class="font-medium text-stone-700">Senha</label>
                     </div>
-                    <input type="password" name="senha" required placeholder="Sua senha"
-                           class="w-full bg-stone-50/60 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2.5 text-stone-900 focus:outline-none transition" />
+                    <div class="relative">
+                        <input :type="showSenha ? 'text' : 'password'" name="senha" required placeholder="Sua senha"
+                               class="w-full bg-stone-50/60 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2.5 pr-10 text-stone-900 focus:outline-none transition" />
+                        <button type="button" 
+                                @click="showSenha = !showSenha" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 flex items-center justify-center transition">
+                            <span class="material-symbols-outlined text-[18px]" x-text="showSenha ? 'visibility_off' : 'visibility'">visibility</span>
+                        </button>
+                    </div>
                 </div>
 
                 <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white font-semibold py-3 rounded-xl text-sm transition shadow-sm mt-1">
