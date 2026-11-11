@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\BordaModel;
 use App\Models\CategoriaModel;
+use App\Models\PedidoItemModel;
 use App\Models\PedidoModel;
 use App\Models\ProdutoModel;
 use App\Models\TamanhoModel;
@@ -31,6 +32,17 @@ class PainelController extends BaseController
         $tamanhoModel   = new TamanhoModel();
         $usuarioModel   = new UsuarioModel();
         $pedidoModel    = new PedidoModel();
+        $pedidoItemModel = new PedidoItemModel();
+
+        $pedidos = $pedidoModel->orderBy('id', 'DESC')->findAll(50);
+        foreach ($pedidos as $p) {
+            $p->itens = $pedidoItemModel->select('pedido_itens.*, produtos.nome as produto_nome, tamanhos.nome as tamanho_nome, bordas.nome as borda_nome')
+                                       ->join('produtos', 'produtos.id = pedido_itens.produto_id', 'left')
+                                       ->join('tamanhos', 'tamanhos.id = pedido_itens.tamanho_id', 'left')
+                                       ->join('bordas', 'bordas.id = pedido_itens.borda_id', 'left')
+                                       ->where('pedido_itens.pedido_id', $p->id)
+                                       ->findAll();
+        }
 
         $dados = [
             'produtos'   => $produtoModel->select('produtos.*, categorias.nome as categoria_nome')
@@ -41,10 +53,50 @@ class PainelController extends BaseController
             'bordas'     => $bordaModel->orderBy('id', 'ASC')->findAll(),
             'tamanhos'   => $tamanhoModel->orderBy('ordem', 'ASC')->findAll(),
             'usuarios'   => $usuarioModel->orderBy('id', 'DESC')->findAll(),
-            'pedidos'    => $pedidoModel->orderBy('id', 'DESC')->findAll(20),
+            'pedidos'    => $pedidos,
         ];
 
         return view('painel/index', $dados);
+    }
+
+    public function atualizarStatusPedido()
+    {
+        if ($redirect = $this->verificarAcesso()) {
+            return $redirect;
+        }
+
+        $pedidoId   = (int) $this->request->getPost('pedido_id');
+        $novoStatus = (string) $this->request->getPost('status');
+
+        $statusValidos = ['pendente', 'confirmado', 'em_preparo', 'saiu_entrega', 'entregue', 'cancelado'];
+        if (! in_array($novoStatus, $statusValidos, true)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(400)->setJSON(['sucesso' => false, 'erro' => 'Status inválido.']);
+            }
+            return redirect()->to('/painel?aba=pedidos')->with('erro', 'Status inválido.');
+        }
+
+        $pedidoModel = new PedidoModel();
+        $pedido = $pedidoModel->find($pedidoId);
+        if (! $pedido) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['sucesso' => false, 'erro' => 'Pedido não encontrado.']);
+            }
+            return redirect()->to('/painel?aba=pedidos')->with('erro', 'Pedido não encontrado.');
+        }
+
+        $pedidoModel->update($pedidoId, ['status' => $novoStatus]);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'sucesso'     => true,
+                'mensagem'    => "Status do pedido {$pedido->codigo} atualizado para {$novoStatus}.",
+                'pedido_id'   => $pedidoId,
+                'novo_status' => $novoStatus,
+            ]);
+        }
+
+        return redirect()->to('/painel?aba=pedidos')->with('sucesso', "Status do pedido {$pedido->codigo} atualizado com sucesso!");
     }
 
     public function salvarProduto()

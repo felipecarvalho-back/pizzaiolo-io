@@ -37,6 +37,7 @@ $routes->get('logout', 'AuthController::logout');
 // Rotas do Painel de Gestão (Admin / Equipe)
 $routes->group('painel', static function ($routes) {
     $routes->get('/', 'PainelController::index');
+    $routes->post('pedido/status', 'PainelController::atualizarStatusPedido');
     $routes->post('produto/salvar', 'PainelController::salvarProduto');
     $routes->get('produto/excluir/(:num)', 'PainelController::excluirProduto/$1');
     $routes->post('categoria/salvar', 'PainelController::salvarCategoria');
