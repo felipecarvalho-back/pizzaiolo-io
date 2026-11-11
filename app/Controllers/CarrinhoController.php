@@ -134,8 +134,14 @@ class CarrinhoController extends BaseController
             $obs = trim((string) $this->request->getPost('obs'));
             $precoFinal = ($precoBase * $fator) + $precoBorda;
 
+            $tamanhoModel = new TamanhoModel();
+            $tamanhoObj   = $tamanhoModel->where('nome', $tamanhoNome)->first();
+            $tamanhoId    = $tamanhoObj ? $tamanhoObj->id : null;
+
             $carrinho[] = [
                 'produto_id' => $produto->id,
+                'tamanho_id' => $tamanhoId,
+                'borda_id'   => $bordaId > 0 ? $bordaId : null,
                 'titulo'     => $titulo,
                 'detalhes'   => "Borda: {$bordaNome}" . ($obs ? " • Obs: {$obs}" : ''),
                 'preco'      => $precoFinal,
@@ -189,6 +195,16 @@ class CarrinhoController extends BaseController
         $pagamento = (string) $this->request->getPost('forma_pagamento');
         $entrega   = (string) $this->request->getPost('tipo_entrega');
 
+        $trocoParaRaw = $this->request->getPost('troco_para');
+        $trocoPara    = null;
+        if (!empty($trocoParaRaw)) {
+            $trocoLimpo = str_replace(['R$', ' ', '.'], '', (string) $trocoParaRaw);
+            $trocoLimpo = str_replace(',', '.', $trocoLimpo);
+            if (is_numeric($trocoLimpo)) {
+                $trocoPara = (float) $trocoLimpo;
+            }
+        }
+
         if (empty($nome) || empty($telefone)) {
             return '<div class="p-3 bg-red-50 text-red-700 text-xs rounded-xl mb-3">Informe seu Nome e WhatsApp.</div>' . $this->drawer();
         }
@@ -208,7 +224,8 @@ class CarrinhoController extends BaseController
             'cliente_telefone' => $telefone,
             'tipo_entrega'     => $entrega,
             'endereco'         => $endereco,
-            'forma_pagamento'  => in_array($pagamento, ['pix', 'dinheiro', 'cartao_credito']) ? $pagamento : 'pix',
+            'forma_pagamento'  => in_array($pagamento, ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito']) ? $pagamento : 'pix',
+            'troco_para'       => $trocoPara,
             'status'           => 'pendente',
             'status_pagamento' => ($pagamento === 'pix') ? 'aguardando' : 'na_entrega',
             'total_produtos'   => $totalProdutos,
@@ -221,10 +238,12 @@ class CarrinhoController extends BaseController
             $itemModel->insert([
                 'pedido_id'      => $pedidoId,
                 'produto_id'     => $item['produto_id'],
+                'tamanho_id'     => $item['tamanho_id'] ?? null,
+                'borda_id'       => $item['borda_id'] ?? null,
                 'quantidade'     => 1,
                 'preco_unitario' => $item['preco'],
                 'subtotal'       => $item['preco'],
-                'observacoes'    => $item['detalhes'] ?? null,
+                'observacao'     => $item['detalhes'] ?? null,
             ]);
         }
 

@@ -15,6 +15,7 @@ class PedidoModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'codigo',
+        'cliente_id',
         'cliente_nome',
         'cliente_telefone',
         'telegram_chat_id',
