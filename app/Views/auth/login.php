@@ -76,7 +76,7 @@
                     <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
                     <span class="hidden sm:inline">Sacola</span>
                     <span id="badge-sacola" class="px-2 py-0.5 rounded-full bg-black/25 text-xs font-bold">
-                        <?= count(session()->get('carrinho') ?? []) ?>
+                        <?= \App\Controllers\CarrinhoController::contarItensCarrinho(session()->get('carrinho') ?? []) ?>
                     </span>
                 </a>
             </div>
@@ -108,6 +108,7 @@
 
             <form action="<?= base_url('login') ?>" method="post" class="space-y-4 text-xs sm:text-sm">
                 <?= csrf_field() ?>
+                <input type="hidden" name="redirect" value="<?= esc($redirect ?? '') ?>" />
 
                 <div>
                     <label class="block font-medium text-stone-700 mb-1">E-mail</label>
@@ -140,10 +141,12 @@
                     É novo cliente?
                     <a href="<?= base_url('cadastro') ?>" class="font-semibold text-brand-800 hover:underline">Cadastre-se grátis</a>
                 </p>
-                <div class="pt-2 text-[11px] text-stone-400">
-                    <span>Admin de teste: </span>
-                    <span class="font-mono text-stone-600">admin@fornodoro.com / 123456</span>
-                </div>
+                <?php if (ENVIRONMENT !== 'production'): ?>
+                    <div class="pt-2 text-[11px] text-stone-400">
+                        <span>Admin de teste: </span>
+                        <span class="font-mono text-stone-600">admin@fornodoro.com / 123456</span>
+                    </div>
+                <?php endif; ?>
             </div>
 
         </div>

@@ -199,6 +199,17 @@ class Database extends Config
         // we don't overwrite live data on accident.
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
+
+            if ($this->tests['DBDriver'] === 'SQLite3' && ! extension_loaded('sqlite3')) {
+                $this->tests['DBDriver'] = $this->default['DBDriver'] ?: 'MySQLi';
+                $this->tests['hostname'] = $this->default['hostname'] ?: 'localhost';
+                $this->tests['username'] = $this->default['username'] ?: 'root';
+                $this->tests['password'] = $this->default['password'] ?? '';
+                $this->tests['database'] = $this->default['database'] ?: 'db_pizza';
+                $this->tests['port']     = $this->default['port'] ?: 3306;
+                $this->tests['charset']  = 'utf8mb4';
+                $this->tests['DBCollat'] = 'utf8mb4_general_ci';
+            }
         }
     }
 }

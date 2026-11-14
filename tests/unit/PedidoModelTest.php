@@ -2,7 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Models\ClienteModel;
 use App\Models\PedidoItemModel;
+use App\Models\PedidoItemSaborModel;
 use App\Models\PedidoModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use Config\Services;
@@ -34,12 +36,39 @@ final class PedidoModelTest extends CIUnitTestCase
         $this->assertContains('borda_id', $allowed);
     }
 
-    public function testPainelPedidoStatusRouteExists(): void
+    public function testPedidoItemSaborModelAllowsSabores(): void
+    {
+        $ref = new \ReflectionClass(PedidoItemSaborModel::class);
+        $defaults = $ref->getDefaultProperties();
+        $allowed = $defaults['allowedFields'] ?? [];
+
+        $this->assertContains('pedido_item_id', $allowed);
+        $this->assertContains('produto_id', $allowed);
+    }
+
+    public function testClienteModelAllowsCepAndCidade(): void
+    {
+        $ref = new \ReflectionClass(ClienteModel::class);
+        $defaults = $ref->getDefaultProperties();
+        $allowed = $defaults['allowedFields'] ?? [];
+
+        $this->assertContains('cep', $allowed);
+        $this->assertContains('cidade', $allowed);
+    }
+
+    public function testPainelPedidoStatusAndSafePostRoutesExist(): void
     {
         $routes = Services::routes();
-        $definedRoutes = $routes->getRoutes('POST');
+        $postRoutes = $routes->getRoutes('POST');
+        $getRoutes  = $routes->getRoutes('GET');
 
-        $this->assertArrayHasKey('painel/pedido/status', $definedRoutes);
-        $this->assertSame('\App\Controllers\PainelController::atualizarStatusPedido', $definedRoutes['painel/pedido/status']);
+        $this->assertArrayHasKey('painel/pedido/status', $postRoutes);
+        $this->assertSame('\App\Controllers\PainelController::atualizarStatusPedido', $postRoutes['painel/pedido/status']);
+
+        // Exclusões devem ser exclusivamente via POST e nunca via GET
+        $this->assertArrayHasKey('painel/produto/excluir/([0-9]+)', $postRoutes);
+        $this->assertArrayHasKey('painel/usuario/excluir/([0-9]+)', $postRoutes);
+        $this->assertArrayNotHasKey('painel/produto/excluir/([0-9]+)', $getRoutes);
+        $this->assertArrayNotHasKey('painel/usuario/excluir/([0-9]+)', $getRoutes);
     }
 }

@@ -8,21 +8,44 @@ use App\Models\UsuarioModel;
 class AuthController extends BaseController
 {
     /**
+     * Valida URL de redirecionamento pós-login prevenindo vulnerabilidades de Open Redirect.
+     */
+    public static function validarRedirect(?string $redirectUrl): ?string
+    {
+        $url = trim((string) $redirectUrl);
+        if ($url === '') {
+            return null;
+        }
+
+        if (
+            ! str_starts_with($url, '/')
+            || str_starts_with($url, '//')
+            || str_starts_with($url, '/\\')
+            || str_contains($url, '://')
+            || preg_match('/[\r\n]/', $url)
+        ) {
+            return null;
+        }
+
+        return $url;
+    }
+
+    /**
      * Tela de Login Única (para Clientes e Administradores)
      */
     public function login()
     {
-        // Se já for admin logado, vai direto pro painel
         if (session()->get('logado')) {
             return redirect()->to('/painel');
         }
 
-        // Se já for cliente logado, vai direto pro perfil dele
         if (session()->get('cliente_logado')) {
             return redirect()->to('/cliente/perfil');
         }
 
-        return view('auth/login');
+        return view('auth/login', [
+            'redirect' => self::validarRedirect((string) $this->request->getGet('redirect')) ?? '',
+        ]);
     }
 
     /**
@@ -46,6 +69,7 @@ class AuthController extends BaseController
         if ($usuario && $usuario->verificarSenha($senha)) {
             $usuarioModel->update($usuario->id, ['ultimo_acesso' => date('Y-m-d H:i:s')]);
 
+            session()->regenerate(true);
             session()->set([
                 'usuario_id'    => $usuario->id,
                 'usuario_nome'  => $usuario->nome,
@@ -62,6 +86,7 @@ class AuthController extends BaseController
         $cliente = $clienteModel->buscarPorEmail($email);
 
         if ($cliente && $cliente->verificarSenha($senha)) {
+            session()->regenerate(true);
             session()->set([
                 'cliente_id'       => $cliente->id,
                 'cliente_nome'     => $cliente->nome,
@@ -70,9 +95,8 @@ class AuthController extends BaseController
                 'cliente_logado'   => true,
             ]);
 
-            // Se veio do cardápio tentando finalizar, volta pro cardápio; senão vai pro perfil
-            $redirectUrl = (string) $this->request->getPost('redirect');
-            if (! empty($redirectUrl)) {
+            $redirectUrl = self::validarRedirect((string) $this->request->getPost('redirect'));
+            if ($redirectUrl !== null) {
                 return redirect()->to($redirectUrl)->with('sucesso', 'Olá, ' . explode(' ', $cliente->nome)[0] . '!');
             }
 
@@ -86,11 +110,24 @@ class AuthController extends BaseController
     }
 
     /**
-     * Logout global
+     * Logout seguro preservando a sacola de compras na sessão
      */
     public function logout()
     {
-        session()->destroy();
+        session()->remove([
+            'usuario_id',
+            'usuario_nome',
+            'usuario_email',
+            'usuario_cargo',
+            'logado',
+            'cliente_id',
+            'cliente_nome',
+            'cliente_email',
+            'cliente_telefone',
+            'cliente_logado',
+        ]);
+        session()->regenerate(true);
+
         return redirect()->to('/login')->with('sucesso', 'Sua sessão foi encerrada.');
     }
 }
