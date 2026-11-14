@@ -6,7 +6,7 @@ $inputNome      = $formInput['nome'] ?? ($cliente->nome ?? '');
 $inputTelefone  = $formInput['telefone'] ?? ($cliente->telefone ?? '');
 $inputEndereco  = $formInput['endereco'] ?? ($cliente ? $cliente->getEnderecoCompleto() : '');
 $inputMesa      = $formInput['mesa'] ?? '';
-$inputPagamento = $formInput['forma_pagamento'] ?? 'pix';
+$inputPagamento = $formInput['forma_pagamento'] ?? '';
 $inputEntrega   = $formInput['tipo_entrega'] ?? '';
 $inputTroco     = $formInput['troco_para'] ?? '';
 ?>
@@ -157,7 +157,7 @@ $inputTroco     = $formInput['troco_para'] ?? '';
                     <span>Retirada no balcão da pizzaria (Sem cobrança de taxa).</span>
                 </div>
 
-                <input type="hidden" name="tipo_entrega" id="input-tipo-entrega" :value="tipoEntrega" />
+                <input type="hidden" name="tipo_entrega" id="input-tipo-entrega" x-model="tipoEntrega" :value="tipoEntrega" />
             </div>
 
             <div>

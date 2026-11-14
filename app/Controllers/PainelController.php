@@ -13,6 +13,34 @@ use App\Models\UsuarioModel;
 
 class PainelController extends BaseController
 {
+    /**
+     * Sanitiza valores monetários (ex: "69,90", "69.90", "R$ 1.200,50", "0,00").
+     */
+    public static function sanitizarPreco(?string $valorRaw): ?float
+    {
+        $raw = trim((string) $valorRaw);
+        if ($raw === '' || str_contains($raw, '-')) {
+            return null;
+        }
+
+        $raw = preg_replace('/[^\d.,]/', '', $raw) ?? '';
+        if ($raw === '') {
+            return null;
+        }
+
+        if (str_contains($raw, ',')) {
+            $raw = str_replace('.', '', $raw);
+            $raw = str_replace(',', '.', $raw);
+        }
+
+        if (! is_numeric($raw)) {
+            return null;
+        }
+
+        $val = round((float) $raw, 2);
+        return $val >= 0.0 ? $val : null;
+    }
+
     private function verificarAcesso()
     {
         if (! session()->get('logado')) {
@@ -28,7 +56,7 @@ class PainelController extends BaseController
             return $redirect;
         }
 
-        $cargo = (string) (session()->get('usuario_cargo') ?: 'admin');
+        $cargo = (string) (session()->get('usuario_cargo') ?? '');
         if ($cargo !== 'admin') {
             return redirect()->to('/painel')->with('erro', 'Acesso restrito ao perfil Administrador.');
         }
@@ -96,23 +124,21 @@ class PainelController extends BaseController
             ->orderBy('produtos.id', 'DESC')
             ->findAll();
 
-        // Cálculo de Métricas Operacionais Reais
-        $inicioHoje      = date('Y-m-d 00:00:00');
-        $pedidosFila     = 0;
-        $pedidosHoje     = 0;
-        $faturamentoHoje = 0.0;
+        // Cálculo de Métricas Operacionais Reais via consultas agregadas no banco
+        $inicioHoje  = date('Y-m-d 00:00:00');
+        $pedidosFila = (int) (new PedidoModel())
+            ->whereIn('status', ['pendente', 'confirmado', 'em_preparo', 'saiu_entrega'])
+            ->countAllResults();
 
-        foreach ($pedidos as $p) {
-            if (in_array($p->status, ['pendente', 'confirmado', 'em_preparo', 'saiu_entrega'], true)) {
-                $pedidosFila++;
-            }
+        $resumoHoje = (new PedidoModel())
+            ->select('COUNT(id) as total_pedidos, COALESCE(SUM(total_geral), 0) as faturamento')
+            ->where('created_at >=', $inicioHoje)
+            ->where('status !=', 'cancelado')
+            ->asArray()
+            ->first();
 
-            $criadoEm = (string) ($p->created_at ?? '');
-            if ($criadoEm >= $inicioHoje && $p->status !== 'cancelado') {
-                $pedidosHoje++;
-                $faturamentoHoje += (float) $p->total_geral;
-            }
-        }
+        $pedidosHoje     = (int) ($resumoHoje['total_pedidos'] ?? 0);
+        $faturamentoHoje = round((float) ($resumoHoje['faturamento'] ?? 0.0), 2);
 
         $produtosAtivos = 0;
         foreach ($produtos as $prod) {
@@ -195,8 +221,7 @@ class PainelController extends BaseController
         $nome        = trim((string) $this->request->getPost('nome'));
         $categoriaId = (int) $this->request->getPost('categoria_id');
         $tipo        = (string) $this->request->getPost('tipo');
-        $precoRaw    = str_replace('.', '', (string) $this->request->getPost('preco_base'));
-        $precoBase   = (float) str_replace(',', '.', $precoRaw ?: (string) $this->request->getPost('preco_base'));
+        $precoBase   = self::sanitizarPreco((string) $this->request->getPost('preco_base')) ?? 0.0;
         $descricao   = trim((string) $this->request->getPost('descricao'));
         $imagem      = trim((string) $this->request->getPost('imagem'));
         $destaque    = $this->request->getPost('destaque') ? 1 : 0;
@@ -337,9 +362,8 @@ class PainelController extends BaseController
             return $redirect;
         }
 
-        $nome     = trim((string) $this->request->getPost('nome'));
-        $precoRaw = str_replace(',', '.', trim((string) $this->request->getPost('preco')));
-        $preco    = is_numeric($precoRaw) ? round((float) $precoRaw, 2) : -1;
+        $nome  = trim((string) $this->request->getPost('nome'));
+        $preco = self::sanitizarPreco((string) $this->request->getPost('preco')) ?? -1.0;
 
         if (strlen($nome) < 2 || $preco < 0) {
             return redirect()->to('/painel?aba=bordas')->with('erro', 'Informe nome e valor adicional válido para a borda.');

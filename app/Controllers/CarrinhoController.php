@@ -474,10 +474,11 @@ class CarrinhoController extends BaseController
 
         $codigo = $pedidoModel->gerarCodigoUnico();
 
-        $db = \Config\Database::connect();
+        $db = $pedidoModel->db;
         $db->transStart();
 
-        $pedidoId = $pedidoModel->insert([
+        $falhaItens = false;
+        $pedidoId   = $pedidoModel->insert([
             'codigo'           => $codigo,
             'cliente_id'       => $clienteId,
             'cliente_nome'     => $nome,
@@ -513,27 +514,44 @@ class CarrinhoController extends BaseController
                     'observacao'     => $item['detalhes'] ?? null,
                 ]);
 
-                if ($pedidoItemId && (($item['tipo'] ?? '') === 'pizza' || ! empty($item['tamanho_id']) || ! empty($item['sabor_2_id']))) {
+                if (! $pedidoItemId) {
+                    $falhaItens = true;
+                    break;
+                }
+
+                if (($item['tipo'] ?? '') === 'pizza' || ! empty($item['tamanho_id']) || ! empty($item['sabor_2_id'])) {
                     // Registra o 1º sabor
-                    $saborModel->insert([
+                    $sabor1Ok = $saborModel->insert([
                         'pedido_item_id' => (int) $pedidoItemId,
                         'produto_id'     => (int) $item['produto_id'],
                     ]);
+                    if ($sabor1Ok === false) {
+                        $falhaItens = true;
+                        break;
+                    }
 
                     // Registra o 2º sabor quando for pizza Meio a Meio
                     if (! empty($item['sabor_2_id'])) {
-                        $saborModel->insert([
+                        $sabor2Ok = $saborModel->insert([
                             'pedido_item_id' => (int) $pedidoItemId,
                             'produto_id'     => (int) $item['sabor_2_id'],
                         ]);
+                        if ($sabor2Ok === false) {
+                            $falhaItens = true;
+                            break;
+                        }
                     }
                 }
             }
         }
 
-        $db->transComplete();
+        if (! $pedidoId || $falhaItens) {
+            $db->transRollback();
+        } else {
+            $db->transComplete();
+        }
 
-        if (! $pedidoId || ! $db->transStatus()) {
+        if (! $pedidoId || $falhaItens || ! $db->transStatus()) {
             return $this->drawer([
                 'erroCheckout' => 'Não foi possível registrar seu pedido agora. Tente novamente.',
                 'formInput'    => $formInput,

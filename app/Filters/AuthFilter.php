@@ -27,7 +27,7 @@ class AuthFilter implements FilterInterface
         }
 
         if (! empty($arguments)) {
-            $cargoUsuario = (string) (session()->get('usuario_cargo') ?: 'admin');
+            $cargoUsuario = (string) (session()->get('usuario_cargo') ?? '');
             if (! in_array($cargoUsuario, $arguments, true)) {
                 if ($request instanceof IncomingRequest && $request->isAJAX()) {
                     return service('response')

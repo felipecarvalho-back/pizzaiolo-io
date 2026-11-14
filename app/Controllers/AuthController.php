@@ -70,11 +70,12 @@ class AuthController extends BaseController
             $usuarioModel->update($usuario->id, ['ultimo_acesso' => date('Y-m-d H:i:s')]);
 
             session()->regenerate(true);
+            session()->remove(['cliente_id', 'cliente_nome', 'cliente_email', 'cliente_telefone', 'cliente_logado']);
             session()->set([
                 'usuario_id'    => $usuario->id,
                 'usuario_nome'  => $usuario->nome,
                 'usuario_email' => $usuario->email,
-                'usuario_cargo' => $usuario->cargo,
+                'usuario_cargo' => $usuario->cargo ?: 'admin',
                 'logado'        => true,
             ]);
 
@@ -87,6 +88,7 @@ class AuthController extends BaseController
 
         if ($cliente && $cliente->verificarSenha($senha)) {
             session()->regenerate(true);
+            session()->remove(['usuario_id', 'usuario_nome', 'usuario_email', 'usuario_cargo', 'logado']);
             session()->set([
                 'cliente_id'       => $cliente->id,
                 'cliente_nome'     => $cliente->nome,

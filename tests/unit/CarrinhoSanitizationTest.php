@@ -4,7 +4,11 @@ namespace Tests\Unit;
 
 use App\Controllers\AuthController;
 use App\Controllers\CarrinhoController;
+use App\Controllers\PainelController;
+use App\Filters\AuthFilter;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\Test\CIUnitTestCase;
+use Config\Services;
 
 /**
  * @internal
@@ -127,5 +131,52 @@ final class CarrinhoSanitizationTest extends CIUnitTestCase
         $this->assertNull(AuthController::validarRedirect('//evil.com'));
         $this->assertNull(AuthController::validarRedirect('/\\evil.com'));
         $this->assertNull(AuthController::validarRedirect('javascript:alert(1)'));
+    }
+
+    /**
+     * Testa a sanitização de preços (com vírgula, ponto decimal, prefixo R$ e milhar) no PainelController
+     */
+    public function testSanitizarPrecoPainel(): void
+    {
+        $this->assertSame(69.90, PainelController::sanitizarPreco('69,90'));
+        $this->assertSame(69.90, PainelController::sanitizarPreco('69.90'));
+        $this->assertSame(69.90, PainelController::sanitizarPreco('R$ 69,90'));
+        $this->assertSame(1200.50, PainelController::sanitizarPreco('1.200,50'));
+        $this->assertSame(0.0, PainelController::sanitizarPreco('0,00'));
+        $this->assertSame(0.0, PainelController::sanitizarPreco('0'));
+        $this->assertNull(PainelController::sanitizarPreco(''));
+        $this->assertNull(PainelController::sanitizarPreco('-15,00'));
+        $this->assertNull(PainelController::sanitizarPreco('gratis'));
+    }
+
+    /**
+     * Testa o AuthFilter com RBAC por cargo (admin, atendente, cozinha e fail-closed sem cargo)
+     */
+    public function testAuthFilterRbacEnforcement(): void
+    {
+        $filter  = new AuthFilter();
+        $request = Services::request();
+
+        // 1. Não autenticado -> redireciona para /login
+        session()->remove(['logado', 'usuario_cargo']);
+        $resUnauth = $filter->before($request, null);
+        $this->assertInstanceOf(RedirectResponse::class, $resUnauth);
+
+        // 2. Autenticado como atendente -> passa em rota geral, mas é bloqueado em auth:admin
+        session()->set(['logado' => true, 'usuario_cargo' => 'atendente']);
+        $this->assertNull($filter->before($request, null));
+        $resAtendenteAdmin = $filter->before($request, ['admin']);
+        $this->assertInstanceOf(RedirectResponse::class, $resAtendenteAdmin);
+
+        // 3. Autenticado sem cargo definido -> fail-closed (bloqueado em auth:admin)
+        session()->set(['logado' => true, 'usuario_cargo' => '']);
+        $resSemCargo = $filter->before($request, ['admin']);
+        $this->assertInstanceOf(RedirectResponse::class, $resSemCargo);
+
+        // 4. Autenticado como admin -> permitido em auth:admin
+        session()->set(['logado' => true, 'usuario_cargo' => 'admin']);
+        $this->assertNull($filter->before($request, ['admin']));
+
+        session()->remove(['logado', 'usuario_cargo']);
     }
 }

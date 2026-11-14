@@ -38,7 +38,7 @@ $whatsappTexto = rawurlencode(implode("\n", $resumoLinhas));
         async consultarStatus() {
             this.consultando = true;
             try {
-                const r = await fetch('<?= base_url('carrinho/status-pedido/' . rawurlencode((string) $codigo)) ?>');
+                const r = await fetch('<?= base_url('carrinho/status-pedido/' . rawurlencode(ltrim((string) $codigo, '#'))) ?>');
                 const d = await r.json();
                 if (d.encontrado) {
                     this.statusAtual = d.status;

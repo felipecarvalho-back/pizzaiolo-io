@@ -49,6 +49,7 @@ class ClienteController extends BaseController
         ]);
 
         session()->regenerate(true);
+        session()->remove(['usuario_id', 'usuario_nome', 'usuario_email', 'usuario_cargo', 'logado']);
         session()->set([
             'cliente_id'       => $clienteId,
             'cliente_nome'     => $nome,

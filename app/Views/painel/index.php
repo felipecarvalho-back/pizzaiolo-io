@@ -1,11 +1,31 @@
 <?php
-$cargoUsuario = (string) (session()->get('usuario_cargo') ?: 'admin');
+$cargoUsuario = (string) (session()->get('usuario_cargo') ?? '');
 $isAdmin      = ($cargoUsuario === 'admin');
 
 $pedidosFila     = (int) ($metricas['pedidos_fila'] ?? 0);
 $pedidosHoje     = (int) ($metricas['pedidos_hoje'] ?? 0);
 $faturamentoHoje = (float) ($metricas['faturamento_hoje'] ?? 0.0);
 $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
+
+$pedidosIndice = [];
+foreach ($pedidos as $p) {
+    $pedidosIndice[] = [
+        'codigo'   => mb_strtolower((string) $p->codigo, 'UTF-8'),
+        'cliente'  => mb_strtolower((string) $p->cliente_nome, 'UTF-8'),
+        'telefone' => mb_strtolower((string) $p->cliente_telefone, 'UTF-8'),
+        'status'   => (string) $p->status,
+    ];
+}
+
+$produtosIndice = [];
+foreach ($produtos as $p) {
+    $produtosIndice[] = [
+        'nome' => mb_strtolower((string) $p->nome, 'UTF-8'),
+        'desc' => mb_strtolower((string) ($p->descricao ?? ''), 'UTF-8'),
+        'cat'  => (string) $p->categoria_id,
+        'tipo' => (string) $p->tipo,
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -129,7 +149,7 @@ $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
                 <span class="font-serif font-bold text-2xl text-emerald-800 mt-1.5 block">R$ <?= number_format($faturamentoHoje, 2, ',', '.') ?></span>
                 <span class="text-[11px] text-stone-400 block mt-0.5"><?= $pedidosHoje ?> <?= $pedidosHoje === 1 ? 'pedido hoje' : 'pedidos hoje' ?></span>
             </div>
-            <div @click="mudarAba('produtos')" class="cursor-pointer bg-white border border-stone-200/90 hover:border-brand-800/40 p-4 rounded-2xl shadow-sm transition">
+            <div <?= $isAdmin ? '@click="mudarAba(\'produtos\')"' : '' ?> class="<?= $isAdmin ? 'cursor-pointer hover:border-brand-800/40' : '' ?> bg-white border border-stone-200/90 p-4 rounded-2xl shadow-sm transition">
                 <div class="flex items-center justify-between text-stone-500">
                     <span class="text-[11px] uppercase tracking-wider font-medium">Cardápio Ativo</span>
                     <span class="material-symbols-outlined text-[20px] text-brand-800">local_pizza</span>
@@ -137,7 +157,7 @@ $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
                 <span class="font-serif font-bold text-2xl text-stone-900 mt-1.5 block"><?= $produtosAtivos ?> ativos</span>
                 <span class="text-[11px] text-stone-400 block mt-0.5"><?= count($produtos) ?> cadastrados</span>
             </div>
-            <div @click="mudarAba('usuarios')" class="cursor-pointer bg-white border border-stone-200/90 hover:border-brand-800/40 p-4 rounded-2xl shadow-sm transition">
+            <div <?= $isAdmin ? '@click="mudarAba(\'usuarios\')"' : '' ?> class="<?= $isAdmin ? 'cursor-pointer hover:border-brand-800/40' : '' ?> bg-white border border-stone-200/90 p-4 rounded-2xl shadow-sm transition">
                 <div class="flex items-center justify-between text-stone-500">
                     <span class="text-[11px] uppercase tracking-wider font-medium">Categorias & Equipe</span>
                     <span class="material-symbols-outlined text-[20px] text-blue-600">group</span>
@@ -435,6 +455,18 @@ $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
                         </div>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- Empty State quando nenhum pedido corresponder ao filtro/busca -->
+                <div x-show="!temResultadoPedido" x-cloak class="bg-white border border-stone-200/90 rounded-2xl p-10 text-center shadow-sm">
+                    <span class="material-symbols-outlined text-4xl text-stone-300 mb-2 block">search_off</span>
+                    <h4 class="font-serif font-bold text-base text-stone-800">Nenhum pedido encontrado</h4>
+                    <p class="text-xs text-stone-500 mt-1 mb-4">Não há pedidos correspondentes ao filtro ou busca informada.</p>
+                    <button type="button"
+                            @click="limparFiltrosPedido()"
+                            class="px-4 py-2 rounded-xl bg-stone-900 hover:bg-black text-white text-xs font-semibold transition">
+                        Limpar filtros de pedidos
+                    </button>
+                </div>
             <?php endif; ?>
 
         </section>
@@ -604,6 +636,18 @@ $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
                             </div>
                         </div>
                     <?php endforeach; ?>
+
+                    <!-- Empty State quando nenhum produto corresponder ao filtro/busca -->
+                    <div x-show="!temResultadoProduto" x-cloak class="bg-stone-50 border border-dashed border-stone-300 rounded-xl p-8 text-center">
+                        <span class="material-symbols-outlined text-3xl text-stone-400 mb-1.5 block">search_off</span>
+                        <h4 class="font-serif font-bold text-sm text-stone-800">Nenhum produto encontrado</h4>
+                        <p class="text-xs text-stone-500 mt-0.5 mb-3">Tente buscar outro termo ou limpar os filtros ativos.</p>
+                        <button type="button"
+                                @click="limparFiltrosProduto()"
+                                class="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-black text-white text-xs font-semibold transition">
+                            Limpar filtros
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -829,11 +873,16 @@ $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
     <!-- SCRIPTS ALPINE.JS DO PAINEL -->
     <script>
         function painelApp() {
+            const isAdmin = <?= $isAdmin ? 'true' : 'false' ?>;
+            const abasPermitidas = isAdmin ? ['pedidos', 'produtos', 'categorias', 'bordas', 'usuarios'] : ['pedidos'];
             const urlParams = new URLSearchParams(window.location.search);
-            const initialTab = urlParams.get('aba') || 'pedidos';
+            const reqTab = urlParams.get('aba') || 'pedidos';
+            const initialTab = abasPermitidas.includes(reqTab) ? reqTab : 'pedidos';
 
             return {
                 abaAtiva: initialTab,
+                pedidosIndice: <?= json_encode($pedidosIndice) ?>,
+                produtosIndice: <?= json_encode($produtosIndice) ?>,
 
                 // Estado de Edição de Produto
                 formProduto: {
@@ -924,10 +973,34 @@ $produtosAtivos  = (int) ($metricas['produtos_ativos'] ?? count($produtos));
                 filtroTipoProduto: 'todos',
 
                 mudarAba(aba) {
+                    if (!abasPermitidas.includes(aba)) {
+                        aba = 'pedidos';
+                    }
                     this.abaAtiva = aba;
                     const url = new URL(window.location.href);
                     url.searchParams.set('aba', aba);
                     window.history.replaceState({}, '', url);
+                },
+
+                limparFiltrosPedido() {
+                    this.buscaPedido = '';
+                    this.filtroStatusPedido = 'todos';
+                },
+
+                limparFiltrosProduto() {
+                    this.buscaProduto = '';
+                    this.filtroCategoriaProduto = 'todas';
+                    this.filtroTipoProduto = 'todos';
+                },
+
+                get temResultadoPedido() {
+                    if (!this.pedidosIndice.length) return true;
+                    return this.pedidosIndice.some((p) => this.pedidoVisivel(p.codigo, p.cliente, p.telefone, p.status));
+                },
+
+                get temResultadoProduto() {
+                    if (!this.produtosIndice.length) return true;
+                    return this.produtosIndice.some((p) => this.produtoVisivel(p.nome, p.desc, p.cat, p.tipo));
                 },
 
                 pedidoVisivel(elOrCodigo, clienteNomeArg, clienteTelefoneArg, statusArg) {

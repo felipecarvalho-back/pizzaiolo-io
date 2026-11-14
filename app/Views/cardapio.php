@@ -399,6 +399,18 @@ foreach ($produtos as $p) {
             }
         });
 
+        document.addEventListener('htmx:oobAfterSwap', function() {
+            if (window.cardapioState) {
+                window.cardapioState.sincronizarBarraFlutuante();
+            }
+        });
+
+        document.addEventListener('htmx:afterSettle', function() {
+            if (window.cardapioState) {
+                window.cardapioState.sincronizarBarraFlutuante();
+            }
+        });
+
         // Componente Principal do Cardápio
         function cardapioApp(catalogo = []) {
             return {
@@ -408,6 +420,7 @@ foreach ($produtos as $p) {
                 busca: '',
                 categoriaAtiva: 'todas',
                 modoEntrega: 'delivery',
+                formaPagamento: 'pix',
                 
                 init() {
                     window.cardapioState = this;
@@ -449,6 +462,7 @@ foreach ($produtos as $p) {
                         inputEntrega.dispatchEvent(new Event('input', { bubbles: true }));
                         inputEntrega.dispatchEvent(new Event('change', { bubbles: true }));
                     }
+                    window.dispatchEvent(new CustomEvent('modo-entrega-alterado', { detail: modo }));
                     this.sincronizarBarraFlutuante();
                 },
 
@@ -567,8 +581,21 @@ foreach ($produtos as $p) {
             return {
                 subtotal: Number(config.subtotal) || 0,
                 tipoEntrega: config.tipoEntrega || (window.cardapioState && window.cardapioState.modoEntrega) || document.getElementById('input-tipo-entrega')?.value || 'delivery',
-                formaPagamento: config.formaPagamento || 'pix',
+                formaPagamento: config.formaPagamento || (window.cardapioState && window.cardapioState.formaPagamento) || 'pix',
                 trocoPara: config.trocoPara || '',
+
+                init() {
+                    window.addEventListener('modo-entrega-alterado', (e) => {
+                        if (e.detail) {
+                            this.tipoEntrega = e.detail;
+                        }
+                    });
+                    this.$watch('formaPagamento', (val) => {
+                        if (window.cardapioState) {
+                            window.cardapioState.formaPagamento = val;
+                        }
+                    });
+                },
 
                 mudarModo(modo) {
                     this.tipoEntrega = modo;

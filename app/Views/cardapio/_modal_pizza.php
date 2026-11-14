@@ -5,14 +5,18 @@ foreach ($todasPizzas as $p) {
 }
 
 $precosBordas = [0 => 0.0];
-$temBordaGratisNoBanco = false;
+$temBordaTradicionalNoBanco = false;
 $bordaPadraoId = 0;
 
 foreach ($bordas as $b) {
     $precoB = (float) $b->preco;
     $precosBordas[(int) $b->id] = $precoB;
-    if ($precoB <= 0 && ! $temBordaGratisNoBanco) {
-        $temBordaGratisNoBanco = true;
+    if (stripos((string) $b->nome, 'Tradicional') !== false) {
+        $temBordaTradicionalNoBanco = true;
+        if ($bordaPadraoId === 0) {
+            $bordaPadraoId = (int) $b->id;
+        }
+    } elseif ($precoB <= 0 && $bordaPadraoId === 0 && $temBordaTradicionalNoBanco) {
         $bordaPadraoId = (int) $b->id;
     }
 }
@@ -137,7 +141,7 @@ if (! isset($fatoresTamanho[$tamanhoPadrao]) && ! empty($listaTamanhos)) {
             <div>
                 <label class="block font-semibold text-stone-900 mb-2">3. Borda Artesanal</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <?php if (! $temBordaGratisNoBanco): ?>
+                    <?php if (! $temBordaTradicionalNoBanco): ?>
                         <label :class="bordaId === 0 ? 'border-brand-800 bg-brand-50 shadow-sm' : 'border-stone-200 hover:border-stone-300'"
                                class="cursor-pointer border p-2.5 rounded-xl flex items-center justify-between text-xs transition">
                             <input type="radio" name="borda_id" value="0" x-model.number="bordaId" class="hidden" />

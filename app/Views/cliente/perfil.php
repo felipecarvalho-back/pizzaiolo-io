@@ -262,6 +262,9 @@
                                                     <?php if (! empty($item->borda_nome) && stripos($item->borda_nome, 'Tradicional') === false): ?>
                                                         <span class="text-brand-800 font-medium">• Borda: <?= esc($item->borda_nome) ?></span>
                                                     <?php endif; ?>
+                                                    <?php if (! empty($item->observacao)): ?>
+                                                        <span class="text-stone-500 italic block mt-0.5"><?= esc($item->observacao) ?></span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <span class="font-semibold text-stone-800 shrink-0">R$ <?= number_format((float) $item->subtotal, 2, ',', '.') ?></span>
                                             </div>
