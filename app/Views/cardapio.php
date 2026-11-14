@@ -1,8 +1,24 @@
+<?php
+$carrinhoSessao = session()->get('carrinho') ?? [];
+$qtdSessao      = \App\Controllers\CarrinhoController::contarItensCarrinho($carrinhoSessao);
+$totalSessao    = (float) array_sum(array_column($carrinhoSessao, 'preco'));
+
+$catalogoIndice = [];
+foreach ($produtos as $p) {
+    $catalogoIndice[] = [
+        'cat'  => (string) ($p->categoria_slug ?? 'tradicionais'),
+        'nome' => mb_strtolower((string) $p->nome, 'UTF-8'),
+        'desc' => mb_strtolower((string) ($p->descricao ?? ''), 'UTF-8'),
+    ];
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="<?= csrf_hash() ?>" />
+    <meta name="csrf-header" content="<?= csrf_header() ?>" />
     <title>Forno d'Oro — Pizzaria Artesanal & Forno a Lenha</title>
     <!-- Google Fonts: Inter & Playfair Display -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -48,7 +64,7 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body x-data="cardapioApp()" 
+<body x-data="cardapioApp(<?= htmlspecialchars(json_encode($catalogoIndice), ENT_QUOTES, 'UTF-8') ?>)" 
       @keydown.escape.window="fecharTodosModais()"
       class="bg-[#faf8f5] text-stone-900 antialiased min-h-screen flex flex-col pb-24 selection:bg-brand-100 selection:text-brand-900">
 
@@ -106,7 +122,7 @@
                     <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
                     <span class="hidden sm:inline">Sacola</span>
                     <span id="badge-sacola" class="px-2 py-0.5 rounded-full bg-black/25 text-xs font-bold">
-                        <?= count(session()->get('carrinho') ?? []) ?>
+                        <?= $qtdSessao ?>
                     </span>
                 </button>
             </div>
@@ -146,24 +162,24 @@
 
         <!-- BARRA DE CONTROLE REATIVA: MODO DE PEDIDO + BUSCA DECLARATIVA -->
         <section class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
-            <div class="inline-flex p-1 bg-white border border-stone-200/80 rounded-xl shadow-xs text-xs font-semibold">
+            <div class="inline-flex p-1 bg-white border border-stone-200/80 rounded-xl shadow-sm text-xs font-semibold">
                 <button type="button" 
                         @click="selecionarModo('delivery')" 
-                        :class="modoEntrega === 'delivery' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+                        :class="modoEntrega === 'delivery' ? 'bg-stone-900 text-white shadow-sm' : 'text-stone-600 hover:text-stone-900'"
                         class="btn-modo px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">moped</span>
                     <span>Entrega</span>
                 </button>
                 <button type="button" 
                         @click="selecionarModo('retirada')" 
-                        :class="modoEntrega === 'retirada' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+                        :class="modoEntrega === 'retirada' ? 'bg-stone-900 text-white shadow-sm' : 'text-stone-600 hover:text-stone-900'"
                         class="btn-modo px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">storefront</span>
                     <span>Retirada</span>
                 </button>
                 <button type="button" 
                         @click="selecionarModo('mesa')" 
-                        :class="modoEntrega === 'mesa' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+                        :class="modoEntrega === 'mesa' ? 'bg-stone-900 text-white shadow-sm' : 'text-stone-600 hover:text-stone-900'"
                         class="btn-modo px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">table_restaurant</span>
                     <span>Na Mesa</span>
@@ -176,7 +192,7 @@
                 <input type="text" 
                        x-model="busca" 
                        placeholder="Buscar sabor ou ingrediente..." 
-                       class="w-full bg-white border border-stone-200/90 rounded-xl py-2 pl-9 pr-8 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-800 shadow-xs transition" />
+                       class="w-full bg-white border border-stone-200/90 rounded-xl py-2 pl-9 pr-8 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-800 shadow-sm transition" />
                 <button x-show="busca.length > 0" 
                         x-cloak
                         @click="busca = ''" 
@@ -189,36 +205,41 @@
         <section class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
             <button type="button"
                     @click="categoriaAtiva = 'todas'" 
-                    :class="categoriaAtiva === 'todas' ? 'bg-stone-900 text-white font-semibold shadow-xs' : 'bg-white border border-stone-200/90 text-stone-700 font-medium hover:border-stone-400'"
+                    :class="categoriaAtiva === 'todas' ? 'bg-stone-900 text-white font-semibold shadow-sm' : 'bg-white border border-stone-200/90 text-stone-700 font-medium hover:border-stone-400'"
                     class="btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs transition">
                 Todas as Opções
             </button>
             <?php foreach ($categorias as $cat): ?>
                 <button type="button"
                         @click="categoriaAtiva = '<?= esc($cat->slug) ?>'" 
-                        :class="categoriaAtiva === '<?= esc($cat->slug) ?>' ? 'bg-stone-900 text-white font-semibold shadow-xs' : 'bg-white border border-stone-200/90 text-stone-700 font-medium hover:border-stone-400'"
+                        :class="categoriaAtiva === '<?= esc($cat->slug) ?>' ? 'bg-stone-900 text-white font-semibold shadow-sm' : 'bg-white border border-stone-200/90 text-stone-700 font-medium hover:border-stone-400'"
                         class="btn-cat shrink-0 px-3.5 py-1.5 rounded-full text-xs transition">
                     <?= esc($cat->nome) ?>
                 </button>
             <?php endforeach; ?>
         </section>
 
-        <!-- GRID DE PRODUTOS: FILTRAGEM DECLARATIVA COM ALPINE.JS -->
+        <!-- GRID DE PRODUTOS: FILTRAGEM DECLARATIVA COM ALPINE.JS (SEGURA CONTRA MULTILINHA E UTF-8) -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="catalogo-produtos">
             <?php foreach ($produtos as $p): ?>
-                <article x-show="cardVisivel('<?= esc($p->categoria_slug ?? 'tradicionais') ?>', '<?= esc(addslashes(strtolower($p->nome))) ?>', '<?= esc(addslashes(strtolower((string)$p->descricao))) ?>')"
+                <?php
+                $catSlug = (string) ($p->categoria_slug ?? 'tradicionais');
+                $nomeMin = mb_strtolower((string) $p->nome, 'UTF-8');
+                $descMin = mb_strtolower((string) ($p->descricao ?? ''), 'UTF-8');
+                ?>
+                <article x-show="cardVisivel($el)"
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0 scale-95"
                          x-transition:enter-end="opacity-100 scale-100"
                          class="card-produto group bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-stone-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition duration-200"
-                         data-cat="<?= esc($p->categoria_slug ?? 'tradicionais') ?>"
-                         data-nome="<?= esc(strtolower($p->nome)) ?>"
-                         data-desc="<?= esc(strtolower((string)$p->descricao)) ?>">
+                         data-cat="<?= esc($catSlug) ?>"
+                         data-nome="<?= esc($nomeMin) ?>"
+                         data-desc="<?= esc($descMin) ?>">
                     <div>
                         <div class="relative aspect-[16/10] bg-stone-100 overflow-hidden">
                             <img src="<?= esc($p->imagem) ?>" alt="<?= esc($p->nome) ?>" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                             <?php if ($p->destaque): ?>
-                                <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-stone-900/90 text-white text-[11px] font-semibold tracking-wide backdrop-blur-xs">
+                                <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-stone-900/90 text-white text-[11px] font-semibold tracking-wide backdrop-blur-sm">
                                     Destaque do Chef
                                 </span>
                             <?php endif; ?>
@@ -240,7 +261,7 @@
                                     hx-target="#modal-container"
                                     hx-swap="innerHTML"
                                     @click="abrirModal()"
-                                    class="px-3.5 py-1.5 rounded-xl bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white font-semibold text-xs transition shadow-xs flex items-center gap-1">
+                                    class="px-3.5 py-1.5 rounded-xl bg-brand-800 hover:bg-brand-900 active:scale-[0.98] text-white font-semibold text-xs transition shadow-sm flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[16px]">tune</span>
                                 <span>Montar</span>
                             </button>
@@ -261,15 +282,24 @@
             <?php endforeach; ?>
         </section>
 
+        <!-- EMPTY STATE QUANDO NENHUM PRODUTO CORRESPONDER À BUSCA/FILTRO -->
+        <div x-show="!temResultado" x-cloak class="bg-white border border-stone-200/90 rounded-2xl p-10 text-center my-4 shadow-sm">
+            <span class="material-symbols-outlined text-4xl text-stone-300 block mb-2">search_off</span>
+            <h3 class="font-serif font-bold text-lg text-stone-800">Nenhuma opção encontrada</h3>
+            <p class="text-xs text-stone-500 mt-1 mb-4">Não encontramos pizzas ou itens para o filtro selecionado.</p>
+            <button type="button" 
+                    @click="limparFiltros()" 
+                    class="px-4 py-2 rounded-xl bg-stone-900 hover:bg-black text-white text-xs font-semibold transition">
+                Limpar busca e ver tudo
+            </button>
+        </div>
+
     </main>
 
-    <!-- BARRA FLUTUANTE DA SACOLA: Atualizada dinamicamente pelo HTMX -->
-    <?php
-    $carrinhoSessao = session()->get('carrinho') ?? [];
-    $qtdSessao = count($carrinhoSessao);
-    $totalSessao = array_sum(array_column($carrinhoSessao, 'preco'));
-    ?>
-    <div id="barra-flutuante" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-11/12 max-w-lg <?= $qtdSessao === 0 ? 'hidden' : '' ?>">
+    <!-- BARRA FLUTUANTE DA SACOLA: Atualizada dinamicamente pelo HTMX e sincronizada com modoEntrega -->
+    <div id="barra-flutuante" 
+         data-subtotal="<?= number_format($totalSessao, 2, '.', '') ?>"
+         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-11/12 max-w-lg <?= $qtdSessao === 0 ? 'hidden' : '' ?>">
         <button @click="toggleSacola()" type="button" class="w-full bg-stone-900 hover:bg-black active:scale-[0.99] text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between transition">
             <div class="flex items-center gap-2.5">
                 <span class="px-2 py-0.5 rounded-lg bg-brand-800 text-white text-xs font-bold">
@@ -277,7 +307,7 @@
                 </span>
                 <span class="text-xs sm:text-sm font-medium">Ver Sacola de Pedidos</span>
             </div>
-            <span class="font-serif font-bold text-sm sm:text-base text-amber-300">
+            <span id="barra-flutuante-valor" class="font-serif font-bold text-sm sm:text-base text-amber-300">
                 R$ <?= number_format($totalSessao + ($qtdSessao > 0 ? 5.00 : 0.00), 2, ',', '.') ?>
             </span>
         </button>
@@ -294,7 +324,7 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          @click.self="fecharModal()" 
-         class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+         class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
         
         <div x-show="isModalOpen"
              x-transition:enter="transition ease-out duration-200"
@@ -319,7 +349,7 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          @click.self="fecharSacola()" 
-         class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex justify-end">
+         class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-sm flex justify-end">
         
         <div x-show="isDrawerOpen"
              x-transition:enter="transform transition ease-out duration-300"
@@ -350,16 +380,29 @@
 
     <!-- SCRIPTS ALPINE.JS & HTMX INTEGRATION -->
     <script>
+        // Injeção automática de Token CSRF nas requisições HTMX
+        document.addEventListener('htmx:configRequest', function(e) {
+            const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+            const headerMeta = document.querySelector('meta[name="csrf-header"]');
+            if (tokenMeta && headerMeta) {
+                e.detail.headers[headerMeta.content] = tokenMeta.content;
+            }
+        });
+
         // Sincronização HTMX + Alpine.js: Re-inicializa a árvore Alpine após swaps do HTMX
         document.addEventListener('htmx:afterSwap', function(e) {
             if (window.Alpine && e.detail && e.detail.target) {
                 window.Alpine.initTree(e.detail.target);
             }
+            if (window.cardapioState) {
+                window.cardapioState.sincronizarBarraFlutuante();
+            }
         });
 
         // Componente Principal do Cardápio
-        function cardapioApp() {
+        function cardapioApp(catalogo = []) {
             return {
+                catalogo: Array.isArray(catalogo) ? catalogo : [],
                 isDrawerOpen: false,
                 isModalOpen: false,
                 busca: '',
@@ -370,6 +413,7 @@
                     window.cardapioState = this;
                     this.$watch('isDrawerOpen', (val) => this.atualizarScroll(val || this.isModalOpen));
                     this.$watch('isModalOpen', (val) => this.atualizarScroll(val || this.isDrawerOpen));
+                    this.$watch('modoEntrega', () => this.sincronizarBarraFlutuante());
                 },
 
                 abrirSacola() {
@@ -392,6 +436,11 @@
                     this.isDrawerOpen = false;
                 },
 
+                limparFiltros() {
+                    this.busca = '';
+                    this.categoriaAtiva = 'todas';
+                },
+
                 selecionarModo(modo) {
                     this.modoEntrega = modo;
                     const inputEntrega = document.getElementById('input-tipo-entrega');
@@ -400,13 +449,43 @@
                         inputEntrega.dispatchEvent(new Event('input', { bubbles: true }));
                         inputEntrega.dispatchEvent(new Event('change', { bubbles: true }));
                     }
+                    this.sincronizarBarraFlutuante();
                 },
 
-                cardVisivel(cat, nome, desc) {
+                sincronizarBarraFlutuante() {
+                    const barra = document.getElementById('barra-flutuante');
+                    const valorEl = document.getElementById('barra-flutuante-valor');
+                    if (!barra || !valorEl) return;
+                    const subtotal = Number(barra.dataset.subtotal || 0);
+                    if (subtotal <= 0) return;
+                    const taxa = this.modoEntrega === 'delivery' ? 5.00 : 0.00;
+                    const total = subtotal + taxa;
+                    valorEl.textContent = 'R$ ' + total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                },
+
+                cardVisivel(elOrCat, nomeArg, descArg) {
+                    let cat = elOrCat;
+                    let nome = nomeArg || '';
+                    let desc = descArg || '';
+                    if (elOrCat && typeof elOrCat === 'object' && elOrCat.dataset) {
+                        cat = elOrCat.dataset.cat || 'tradicionais';
+                        nome = elOrCat.dataset.nome || '';
+                        desc = elOrCat.dataset.desc || '';
+                    }
                     const termo = this.busca.trim().toLowerCase();
                     const categoriaOk = (this.categoriaAtiva === 'todas' || cat === this.categoriaAtiva);
                     const buscaOk = !termo || nome.includes(termo) || (desc && desc.includes(termo));
                     return categoriaOk && buscaOk;
+                },
+
+                get temResultado() {
+                    if (!this.catalogo.length) return true;
+                    const termo = this.busca.trim().toLowerCase();
+                    return this.catalogo.some((item) => {
+                        const catOk = (this.categoriaAtiva === 'todas' || item.cat === this.categoriaAtiva);
+                        const buscaOk = !termo || item.nome.includes(termo) || (item.desc && item.desc.includes(termo));
+                        return catOk && buscaOk;
+                    });
                 },
 
                 atualizarScroll(bloquear) {
@@ -425,6 +504,8 @@
                 preco1: Number(config.preco1) || 0,
                 precosPizzas: config.precosPizzas || {},
                 precosBordas: config.precosBordas || {},
+                fatoresTamanho: config.fatoresTamanho || { 'Broto': 0.75, 'Média': 0.90, 'Grande': 1.00 },
+                maxSaboresTamanho: config.maxSaboresTamanho || { 'Broto': 1, 'Média': 2, 'Grande': 2 },
                 tamanho: config.tamanho || 'Grande',
                 sabor2Id: config.sabor2Id || '',
                 bordaId: Number(config.bordaId) || 0,
@@ -432,23 +513,33 @@
 
                 init() {
                     this.$watch('tamanho', (val) => {
-                        if (val === 'Broto') {
+                        if (!this.permiteSegundoSabor) {
                             this.sabor2Id = '';
                         }
                     });
                 },
 
+                get permiteSegundoSabor() {
+                    const max = this.maxSaboresTamanho[this.tamanho];
+                    if (typeof max !== 'undefined') {
+                        return Number(max) >= 2;
+                    }
+                    return this.tamanho !== 'Broto';
+                },
                 get fatorTamanho() {
+                    if (this.fatoresTamanho[this.tamanho]) {
+                        return Number(this.fatoresTamanho[this.tamanho]);
+                    }
                     if (this.tamanho === 'Broto') return 0.75;
                     if (this.tamanho === 'Média') return 0.90;
                     return 1.0;
                 },
                 get preco2() {
-                    if (!this.sabor2Id || this.tamanho === 'Broto') return 0;
+                    if (!this.sabor2Id || !this.permiteSegundoSabor) return 0;
                     return Number(this.precosPizzas[this.sabor2Id]) || 0;
                 },
                 get precoBaseFinal() {
-                    if (this.sabor2Id && this.preco2 > 0 && this.tamanho !== 'Broto') {
+                    if (this.sabor2Id && this.preco2 > 0 && this.permiteSegundoSabor) {
                         return Math.max(this.preco1, this.preco2);
                     }
                     return this.preco1;
@@ -471,26 +562,33 @@
             };
         }
 
-        // Componente Reativo do Drawer do Carrinho
+        // Componente Reativo do Drawer do Carrinho (com cálculo de 10% OFF no PIX)
         function drawerCheckout(config) {
             return {
                 subtotal: Number(config.subtotal) || 0,
-                tipoEntrega: (window.cardapioState && window.cardapioState.modoEntrega) || document.getElementById('input-tipo-entrega')?.value || 'delivery',
-                formaPagamento: 'pix',
-                trocoPara: '',
+                tipoEntrega: config.tipoEntrega || (window.cardapioState && window.cardapioState.modoEntrega) || document.getElementById('input-tipo-entrega')?.value || 'delivery',
+                formaPagamento: config.formaPagamento || 'pix',
+                trocoPara: config.trocoPara || '',
 
                 mudarModo(modo) {
                     this.tipoEntrega = modo;
                     if (window.cardapioState) {
                         window.cardapioState.modoEntrega = modo;
+                        window.cardapioState.sincronizarBarraFlutuante();
                     }
                 },
 
+                get descontoPix() {
+                    return this.formaPagamento === 'pix' ? Math.round(this.subtotal * 0.10 * 100) / 100 : 0.00;
+                },
+                get descontoPixFormatado() {
+                    return '- R$ ' + this.descontoPix.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                },
                 get taxaEntrega() {
                     return this.tipoEntrega === 'delivery' ? 5.00 : 0.00;
                 },
                 get totalFinal() {
-                    return this.subtotal + this.taxaEntrega;
+                    return Math.max(0, this.subtotal - this.descontoPix) + this.taxaEntrega;
                 },
                 get totalFinalFormatado() {
                     return this.totalFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -506,6 +604,9 @@
             if (window.cardapioState) window.cardapioState.toggleSacola();
         };
         window.toggleSacolaSeFechada = function() {
+            if (window.cardapioState) window.cardapioState.abrirSacola();
+        };
+        window.abrirSacola = function() {
             if (window.cardapioState) window.cardapioState.abrirSacola();
         };
         window.abrirModal = function() {
