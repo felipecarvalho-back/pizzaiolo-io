@@ -84,7 +84,7 @@
         <!-- Perfil Header -->
         <div class="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <div class="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-200 text-brand-800 font-serif font-bold text-2xl flex items-center justify-center uppercase shadow-2xs">
+                <div class="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-200 text-brand-800 font-serif font-bold text-2xl flex items-center justify-center uppercase shadow-sm">
                     <?= esc(substr($cliente->nome, 0, 1)) ?>
                 </div>
                 <div>
@@ -101,10 +101,10 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            <!-- Coluna 1: Atualização de Dados e Endereço -->
-            <div x-data="{ showNovaSenha: false, telefone: '<?= esc($cliente->telefone) ?>' }" class="lg:col-span-5 bg-white border border-stone-200/90 rounded-2xl p-6 shadow-sm">
+            <!-- Coluna 1: Atualização de Dados e Endereço com ViaCEP -->
+            <div x-data="perfilCliente()" class="lg:col-span-5 bg-white border border-stone-200/90 rounded-2xl p-6 shadow-sm">
                 <h2 class="font-serif font-bold text-lg text-stone-900 mb-1">Meus Dados & Endereço</h2>
-                <p class="text-xs text-stone-500 mb-5">Mantenha seu endereço atualizado para entregas rápidas.</p>
+                <p class="text-xs text-stone-500 mb-5">Mantenha seu CEP e endereço atualizados para entregas rápidas.</p>
 
                 <form action="<?= base_url('cliente/perfil') ?>" method="post" class="space-y-3.5 text-xs sm:text-sm">
                     <?= csrf_field() ?>
@@ -117,35 +117,51 @@
 
                     <div>
                         <label class="block font-medium text-stone-700 mb-1">WhatsApp / Telefone</label>
-                        <input type="tel" name="telefone" x-model="telefone" required
+                        <input type="tel" name="telefone" x-model="telefone" @input="formatarTelefone()" required
                                class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2.5 text-stone-900 focus:outline-none transition" />
                     </div>
 
                     <div class="pt-3 border-t border-stone-100">
-                        <span class="block text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Endereço de Entrega Principal</span>
-                        
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="block text-xs font-semibold uppercase tracking-wider text-stone-400">Endereço de Entrega Principal</span>
+                            <span x-show="buscandoCep" x-cloak class="text-[11px] text-brand-800 font-medium animate-pulse">Buscando CEP...</span>
+                        </div>
+
                         <div class="grid grid-cols-3 gap-2 mb-2">
-                            <div class="col-span-2">
-                                <label class="block text-[11px] text-stone-500 mb-0.5">Rua / Logradouro</label>
-                                <input type="text" name="endereco" value="<?= esc($cliente->endereco) ?>" placeholder="Rua..."
+                            <div>
+                                <label class="block text-[11px] text-stone-500 mb-0.5">CEP</label>
+                                <input type="text" name="cep" x-model="cep" @input="formatarCep()" @blur="consultarCep()" maxlength="9" placeholder="00000-000"
                                        class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2 text-stone-900 focus:outline-none transition text-xs" />
                             </div>
+                            <div class="col-span-2">
+                                <label class="block text-[11px] text-stone-500 mb-0.5">Rua / Logradouro</label>
+                                <input type="text" name="endereco" x-model="endereco" placeholder="Rua..."
+                                       class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2 text-stone-900 focus:outline-none transition text-xs" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 mb-2">
                             <div>
                                 <label class="block text-[11px] text-stone-500 mb-0.5">Número</label>
                                 <input type="text" name="numero" value="<?= esc($cliente->numero) ?>" placeholder="123"
+                                       class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2 text-stone-900 focus:outline-none transition text-xs" />
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[11px] text-stone-500 mb-0.5">Bairro</label>
+                                <input type="text" name="bairro" x-model="bairro" placeholder="Bairro"
                                        class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2 text-stone-900 focus:outline-none transition text-xs" />
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2 mb-2">
                             <div>
-                                <label class="block text-[11px] text-stone-500 mb-0.5">Bairro</label>
-                                <input type="text" name="bairro" value="<?= esc($cliente->bairro) ?>" placeholder="Bairro"
+                                <label class="block text-[11px] text-stone-500 mb-0.5">Complemento</label>
+                                <input type="text" name="complemento" value="<?= esc($cliente->complemento) ?>" placeholder="Apto 42"
                                        class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2 text-stone-900 focus:outline-none transition text-xs" />
                             </div>
                             <div>
-                                <label class="block text-[11px] text-stone-500 mb-0.5">Complemento</label>
-                                <input type="text" name="complemento" value="<?= esc($cliente->complemento) ?>" placeholder="Apto 42"
+                                <label class="block text-[11px] text-stone-500 mb-0.5">Cidade</label>
+                                <input type="text" name="cidade" x-model="cidade" placeholder="São Paulo"
                                        class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2 text-stone-900 focus:outline-none transition text-xs" />
                             </div>
                         </div>
@@ -170,10 +186,10 @@
                 </form>
             </div>
 
-            <!-- Coluna 2: Histórico de Pedidos com Badges Semânticos -->
+            <!-- Coluna 2: Histórico de Pedidos com Sabores (Inteira / Meio a Meio) e Badges Semânticos -->
             <div class="lg:col-span-7 bg-white border border-stone-200/90 rounded-2xl p-6 shadow-sm">
                 <h2 class="font-serif font-bold text-lg text-stone-900 mb-1">Histórico de Pedidos</h2>
-                <p class="text-xs text-stone-500 mb-5">Acompanhe seus pedidos anteriores e status atual.</p>
+                <p class="text-xs text-stone-500 mb-5">Acompanhe seus pedidos anteriores, sabores e status atual.</p>
 
                 <?php if (empty($pedidos)): ?>
                     <div class="text-center py-12 px-4 border border-dashed border-stone-200 rounded-xl">
@@ -205,22 +221,53 @@
                                 'cancelado'    => 'Cancelado',
                             ];
                             ?>
-                            <div class="border border-stone-200/90 hover:border-stone-300 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-bold text-stone-900 text-sm"><?= esc($p->codigo) ?></span>
-                                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border <?= $badgeColor ?>">
-                                            <?= $statusLabels[$p->status] ?? ucfirst(str_replace('_', ' ', esc($p->status))) ?>
+                            <div class="border border-stone-200/90 hover:border-stone-300 rounded-xl p-4 space-y-3 transition">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-stone-900 text-sm"><?= esc($p->codigo) ?></span>
+                                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border <?= $badgeColor ?>">
+                                                <?= $statusLabels[$p->status] ?? ucfirst(str_replace('_', ' ', esc($p->status))) ?>
+                                            </span>
+                                        </div>
+                                        <span class="text-xs text-stone-500 block mt-0.5">
+                                            <?= date('d/m/Y \à\s H:i', strtotime($p->created_at ?? 'now')) ?> • <?= ucfirst(esc($p->tipo_entrega)) ?>
                                         </span>
                                     </div>
-                                    <span class="text-xs text-stone-500 block mt-1">
-                                        <?= date('d/m/Y \à\s H:i', strtotime($p->created_at ?? 'now')) ?> • <?= ucfirst(esc($p->tipo_entrega)) ?>
-                                    </span>
+                                    <div class="sm:text-right">
+                                        <span class="font-bold text-stone-900 text-sm block">R$ <?= number_format((float) $p->total_geral, 2, ',', '.') ?></span>
+                                        <span class="text-[11px] text-stone-500 capitalize"><?= str_replace('_', ' ', esc($p->forma_pagamento)) ?></span>
+                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <span class="font-bold text-stone-900 text-sm block">R$ <?= number_format((float) $p->total_geral, 2, ',', '.') ?></span>
-                                    <span class="text-[11px] text-stone-500 capitalize"><?= str_replace('_', ' ', esc($p->forma_pagamento)) ?></span>
-                                </div>
+
+                                <?php if (! empty($p->itens)): ?>
+                                    <div class="pt-2.5 border-t border-stone-100 space-y-1.5">
+                                        <?php foreach ($p->itens as $item): ?>
+                                            <?php
+                                            $sabores = $item->sabores_nomes ?? [];
+                                            if (count($sabores) >= 2) {
+                                                $nomeExibicao = '1/2 ' . $sabores[0] . ' + 1/2 ' . $sabores[1];
+                                            } elseif (count($sabores) === 1) {
+                                                $nomeExibicao = $sabores[0];
+                                            } else {
+                                                $nomeExibicao = $item->produto_nome ?? 'Item';
+                                            }
+                                            ?>
+                                            <div class="text-xs text-stone-700 bg-stone-50 px-3 py-2 rounded-lg flex items-center justify-between gap-2">
+                                                <div class="min-w-0">
+                                                    <span class="font-semibold text-stone-900"><?= max(1, (int) $item->quantidade) ?>x <?= esc($nomeExibicao) ?></span>
+                                                    <?php if (! empty($item->tamanho_nome)): ?>
+                                                        <span class="text-stone-500">(<?= esc($item->tamanho_nome) ?>)</span>
+                                                    <?php endif; ?>
+                                                    <?php if (! empty($item->borda_nome) && stripos($item->borda_nome, 'Tradicional') === false): ?>
+                                                        <span class="text-brand-800 font-medium">• Borda: <?= esc($item->borda_nome) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <span class="font-semibold text-stone-800 shrink-0">R$ <?= number_format((float) $item->subtotal, 2, ',', '.') ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -234,6 +281,67 @@
     <footer class="text-center py-4 text-xs text-stone-400 border-t border-stone-200/60 mt-12 bg-white">
         &copy; <?= date('Y') ?> Forno d'Oro Pizzaria Artesanal.
     </footer>
+
+    <script>
+        function perfilCliente() {
+            return {
+                showNovaSenha: false,
+                telefone: '<?= esc($cliente->telefone ?? '') ?>',
+                cep: '<?= esc($cliente->cep ?? '') ?>',
+                endereco: '<?= esc($cliente->endereco ?? '') ?>',
+                bairro: '<?= esc($cliente->bairro ?? '') ?>',
+                cidade: '<?= esc($cliente->cidade ?? '') ?>',
+                buscandoCep: false,
+
+                formatarTelefone() {
+                    let v = this.telefone.replace(/\D/g, '');
+                    if (v.length > 11) v = v.substring(0, 11);
+                    if (v.length > 10) {
+                        this.telefone = `(${v.substring(0, 2)}) ${v.substring(2, 7)}-${v.substring(7)}`;
+                    } else if (v.length > 6) {
+                        this.telefone = `(${v.substring(0, 2)}) ${v.substring(2, 6)}-${v.substring(6)}`;
+                    } else if (v.length > 2) {
+                        this.telefone = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+                    } else if (v.length > 0) {
+                        this.telefone = `(${v}`;
+                    }
+                },
+
+                formatarCep() {
+                    let v = this.cep.replace(/\D/g, '');
+                    if (v.length > 8) v = v.substring(0, 8);
+                    if (v.length > 5) {
+                        this.cep = `${v.substring(0, 5)}-${v.substring(5)}`;
+                    } else {
+                        this.cep = v;
+                    }
+                    if (v.length === 8) {
+                        this.consultarCep();
+                    }
+                },
+
+                async consultarCep() {
+                    const limpo = this.cep.replace(/\D/g, '');
+                    if (limpo.length !== 8) return;
+
+                    this.buscandoCep = true;
+                    try {
+                        const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
+                        const data = await res.json();
+                        if (!data.erro) {
+                            if (data.logradouro) this.endereco = data.logradouro;
+                            if (data.bairro) this.bairro = data.bairro;
+                            if (data.localidade) this.cidade = data.localidade;
+                        }
+                    } catch (e) {
+                        console.warn('Erro ao consultar ViaCEP', e);
+                    } finally {
+                        this.buscandoCep = false;
+                    }
+                }
+            };
+        }
+    </script>
 
 </body>
 </html>

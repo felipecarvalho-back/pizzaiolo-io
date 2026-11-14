@@ -75,7 +75,7 @@
                     <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
                     <span class="hidden sm:inline">Sacola</span>
                     <span id="badge-sacola" class="px-2 py-0.5 rounded-full bg-black/25 text-xs font-bold">
-                        <?= count(session()->get('carrinho') ?? []) ?>
+                        <?= \App\Controllers\CarrinhoController::contarItensCarrinho(session()->get('carrinho') ?? []) ?>
                     </span>
                 </a>
             </div>
@@ -179,8 +179,10 @@
                         </div>
                     </div>
 
-                    <div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input type="text" name="complemento" value="<?= old('complemento') ?>" placeholder="Complemento (Apto, Bloco, Referência)"
+                               class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2.5 text-stone-900 focus:outline-none transition text-xs" />
+                        <input type="text" name="cidade" x-model="cidade" value="<?= old('cidade') ?>" placeholder="Cidade"
                                class="w-full bg-stone-50/50 border border-stone-300 focus:border-brand-800 focus:bg-white rounded-xl p-2.5 text-stone-900 focus:outline-none transition text-xs" />
                     </div>
                 </div>
@@ -207,10 +209,11 @@
         function cadastroCliente() {
             return {
                 showSenha: false,
-                telefone: '<?= old('telefone') ?? '' ?>',
-                cep: '',
-                endereco: '<?= old('endereco') ?? '' ?>',
-                bairro: '<?= old('bairro') ?? '' ?>',
+                telefone: '<?= esc(old('telefone') ?? '') ?>',
+                cep: '<?= esc(old('cep') ?? '') ?>',
+                endereco: '<?= esc(old('endereco') ?? '') ?>',
+                bairro: '<?= esc(old('bairro') ?? '') ?>',
+                cidade: '<?= esc(old('cidade') ?? '') ?>',
                 buscandoCep: false,
 
                 formatarTelefone() {
@@ -251,6 +254,7 @@
                         if (!data.erro) {
                             if (data.logradouro) this.endereco = data.logradouro;
                             if (data.bairro) this.bairro = data.bairro;
+                            if (data.localidade) this.cidade = data.localidade;
                         }
                     } catch (e) {
                         console.warn('Erro ao consultar ViaCEP', e);

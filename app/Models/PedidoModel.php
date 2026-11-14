@@ -50,12 +50,13 @@ class PedidoModel extends Model
     ];
 
     /**
-     * Gera um código legível único para o pedido (ex: PED-9821)
+     * Gera um código legível único para o pedido (ex: #FORNO-4821)
      */
     public function gerarCodigoUnico(): string
     {
         do {
-            $codigo = 'PED-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
+            $sufixo = strtoupper(substr(bin2hex(random_bytes(3)), 0, 4));
+            $codigo = '#FORNO-' . $sufixo;
         } while ($this->where('codigo', $codigo)->first() !== null);
 
         return $codigo;
